@@ -3,11 +3,10 @@ import { ArrowRight, Truck, Shield, Headphones, Star, Sparkles, ChevronLeft, Che
 import { Link } from 'react-router';
 import { ProductCard } from '../components/ProductCard';
 import { toast } from 'sonner';
-import { PRODUCTS } from '../../lib/products';
+import { useProducts } from '../../lib/productsApi';
+import { subscribeNewsletter } from '../../lib/db';
 
 // Get featured products - first 8 products from the catalog
-const featuredProducts = PRODUCTS.filter(p => p.gender === 'men' && p.inStock).slice(0, 8);
-
 const heroSlides = [
   { img: 'https://images.unsplash.com/photo-1775831726606-3d98ebefb57a?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&q=80&w=1920', label: 'Spring / Summer 2026', title: 'Modern\nSophistication' },
   { img: 'https://images.unsplash.com/photo-1617137968427-85924c800a22?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&q=80&w=1920', label: 'New Arrivals', title: 'Refined\nElegance' },
@@ -30,6 +29,8 @@ const features = [
 ];
 
 export function HomePage() {
+  const { products } = useProducts();
+  const featuredProducts = products.filter(p => p.gender === 'men' && p.inStock).slice(0, 8);
   const [newsletterEmail, setNewsletterEmail] = useState('');
   const [current, setCurrent] = useState(0);
 
@@ -41,9 +42,10 @@ export function HomePage() {
     return () => clearInterval(timer);
   }, [next]);
 
-  const handleNewsletter = (e: React.FormEvent) => {
+  const handleNewsletter = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newsletterEmail) return;
+    await subscribeNewsletter(newsletterEmail);
     toast.success('Subscribed!', { description: "You're now on the inner circle list." });
     setNewsletterEmail('');
   };
@@ -223,7 +225,7 @@ export function HomePage() {
           <p className="text-white/50 mb-8 text-sm leading-relaxed">
             Be the first to know about new collections, exclusive offers, and styling tips.
           </p>
-          <form onSubmit={handleNewsletter} className="flex gap-2.5 max-w-sm mx-auto">
+          <form onSubmit={handleNewsletter} className="flex flex-col sm:flex-row gap-2.5 max-w-sm mx-auto">
             <input
               id="homepage-newsletter-email"
               name="newsletter-email"
@@ -233,7 +235,7 @@ export function HomePage() {
               placeholder="Your email address"
               className="flex-1 px-4 py-3 bg-white/10 border border-white/20 text-white placeholder:text-white/30 rounded-xl text-sm focus:outline-none focus:border-[#64020e] transition-colors"
             />
-            <button type="submit" className="btn-brand px-5 py-3 text-sm whitespace-nowrap">
+            <button type="submit" className="btn-brand px-5 py-3 text-sm whitespace-nowrap justify-center">
               Subscribe
             </button>
           </form>

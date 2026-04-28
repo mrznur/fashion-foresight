@@ -2,7 +2,8 @@ import { useState, useEffect } from 'react';
 import { useSearchParams, Link } from 'react-router';
 import { ProductCard } from '../components/ProductCard';
 import { SlidersHorizontal, X, ChevronDown, Clock, ArrowRight } from 'lucide-react';
-import { PRODUCTS, CATEGORIES } from '../../lib/products';
+import { CATEGORIES } from '../../lib/products';
+import { useProducts } from '../../lib/productsApi';
 import type { ProductGender } from '../../lib/types';
 
 const GENDER_TABS: { id: ProductGender; label: string }[] = [
@@ -12,6 +13,7 @@ const GENDER_TABS: { id: ProductGender; label: string }[] = [
 ];
 
 export function ShopPage() {
+  const { products } = useProducts();
   const [searchParams, setSearchParams] = useSearchParams();
   const [activeGender, setActiveGender] = useState<ProductGender>('men');
   const [filterOpen, setFilterOpen] = useState(false);
@@ -57,7 +59,7 @@ export function ShopPage() {
     });
   };
 
-  const genderProducts = PRODUCTS.filter((p) => p.gender === activeGender);
+  const genderProducts = products.filter((p) => p.gender === activeGender);
 
   const filteredProducts = genderProducts.filter((p) => {
     const catMatch = selectedCategory === 'All' || p.category === selectedCategory;

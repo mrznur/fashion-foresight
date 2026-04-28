@@ -3,6 +3,8 @@ import { useState } from 'react';
 import { toast } from 'sonner';
 import { contactSchema } from '../../lib/validation';
 import type { ContactInput } from '../../lib/validation';
+import { submitContactMessage } from '../../lib/db';
+import { useSettings } from '../../lib/useSettings';
 
 type FieldErrors = Partial<Record<keyof ContactInput, string>>;
 
@@ -12,6 +14,7 @@ const inputClass = (hasError: boolean) =>
   }`;
 
 export function ContactPage() {
+  const s = useSettings();
   const [formData, setFormData] = useState<ContactInput>({
     firstName: '', lastName: '', email: '', phone: '', subject: 'General Inquiry', message: '',
   });
@@ -39,7 +42,14 @@ export function ContactPage() {
       return;
     }
     setSubmitting(true);
-    await new Promise((r) => setTimeout(r, 1200));
+    await submitContactMessage({
+      first_name: parsed.data.firstName,
+      last_name: parsed.data.lastName,
+      email: parsed.data.email,
+      phone: parsed.data.phone,
+      subject: parsed.data.subject,
+      message: parsed.data.message,
+    });
     setSubmitting(false);
     setSubmitted(true);
     toast.success('Message sent!', { description: "We'll get back to you within 24 hours." });
@@ -152,9 +162,9 @@ export function ContactPage() {
           <div className="lg:col-span-2 space-y-5">
             {/* Contact cards */}
             {[
-              { icon: MapPin, title: 'Visit Our Atelier', lines: ['Via Montenapoleone 12', '20121 Milan, Italy'] },
-              { icon: Phone, title: 'Call Us', lines: ['+39 02 7600 1234', 'Mon–Sat: 10:00–19:00 CET'] },
-              { icon: Mail, title: 'Email Us', lines: ['contact@fashion-foresight-menswear.com', 'We respond within 24 hours'] },
+              { icon: MapPin, title: 'Visit Our Atelier', lines: [s.store_address] },
+              { icon: Phone, title: 'Call Us', lines: [s.support_phone, s.business_hours] },
+              { icon: Mail, title: 'Email Us', lines: [s.store_email, 'We respond within 24 hours'] },
             ].map(({ icon: Icon, title, lines }) => (
               <div key={title} className="flex items-start gap-4 p-5 bg-white border border-[#e5e5e5] rounded-2xl hover:border-[#64020e]/30 transition-colors">
                 <div className="w-10 h-10 bg-[#fdf2f2] rounded-xl flex items-center justify-center flex-shrink-0">

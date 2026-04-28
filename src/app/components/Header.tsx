@@ -1,4 +1,4 @@
-import { ShoppingCart, Menu, X, Search, User, LogOut, LayoutDashboard, ChevronDown } from 'lucide-react';
+import { ShoppingCart, Menu, X, Search, User, LogOut, LayoutDashboard } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router';
 import { useCart } from '../context/CartContext';
@@ -34,112 +34,109 @@ export function Header({ onAuthClick, onSearchOpen }: HeaderProps) {
     to === '/' ? location.pathname === '/' : location.pathname.startsWith(to);
 
   const handleLogout = async () => {
+    setUserMenuOpen(false);
     await signOut();
     toast.success('Signed out successfully');
   };
 
   return (
-    <header
-      className="sticky top-0 z-40 bg-white border-b border-[#e8dede]"
-    >
+    <header className="sticky top-0 z-40 bg-white border-b border-[#e8dede]">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-        <div className="flex items-center justify-between h-20 md:h-24" style={{ height: '80px' }}>
+        <div className="flex items-center justify-between h-14 md:h-16">
 
-          {/* ── Logo ─────────────────────────────────────────────────────── */}
-          <Link to="/" className="flex-shrink-0 min-w-0" aria-label="Fashion Foresight — Home">
+          {/* Logo */}
+          <Link to="/" className="flex-shrink-0" aria-label="Fashion Foresight">
             <img
               src="/images/logo-desktop.png"
               alt="Fashion Foresight"
-              className="h-8 md:h-11 w-auto max-w-[140px] sm:max-w-[180px] md:max-w-[220px] object-contain"
+              className="h-7 md:h-10 w-auto max-w-[130px] md:max-w-[200px] object-contain"
             />
           </Link>
 
-          {/* ── Desktop Nav ───────────────────────────────────────────────── */}
-          <nav className="hidden md:flex items-center gap-0" aria-label="Main navigation">
+          {/* Desktop Nav */}
+          <nav className="hidden md:flex items-center" aria-label="Main navigation">
             {navLinks.map(({ to, label }) => (
               <Link
                 key={to}
                 to={to}
-                className={`relative px-6 py-3 font-body font-medium transition-all duration-200 group ${
-                  isActive(to)
-                    ? 'text-[#64020e]'
-                    : 'text-[#7a5c60] hover:text-[#64020e]'
+                className={`relative px-5 py-2 text-base font-medium transition-colors group ${
+                  isActive(to) ? 'text-[#64020e]' : 'text-[#7a5c60] hover:text-[#64020e]'
                 }`}
-                style={{ fontSize: '1.125rem' }} /* Increased from 1rem */
                 aria-current={isActive(to) ? 'page' : undefined}
               >
                 {label}
-                {/* Full-width underline — spans the entire link text */}
-                <span
-                  className={`absolute bottom-1 left-6 right-6 h-0.5 bg-[#64020e] rounded-full transition-all duration-300 origin-left ${
-                    isActive(to) ? 'scale-x-100 opacity-100' : 'scale-x-0 opacity-0 group-hover:scale-x-100 group-hover:opacity-80'
-                  }`}
-                />
+                <span className={`absolute bottom-0 left-5 right-5 h-0.5 bg-[#64020e] rounded-full transition-all duration-300 origin-left ${
+                  isActive(to) ? 'scale-x-100' : 'scale-x-0 group-hover:scale-x-100'
+                }`} />
               </Link>
             ))}
           </nav>
 
-          {/* ── Right Icons ───────────────────────────────────────────────── */}
-          <div className="flex items-center gap-1 sm:gap-2">
+          {/* Right side icons */}
+          <div className="flex items-center gap-1">
 
             {/* Search */}
             <button
               onClick={onSearchOpen}
-              className="w-10 h-10 flex items-center justify-center rounded-xl text-[#7a5c60] hover:text-[#64020e] hover:bg-[#fdf2f2] transition-all duration-200"
-              aria-label="Open search"
+              className="w-9 h-9 flex items-center justify-center rounded-xl text-[#7a5c60] hover:text-[#64020e] hover:bg-[#fdf2f2] transition-all"
+              aria-label="Search"
             >
-              <Search className="w-5 h-5" />
+              <Search className="w-4 h-4" />
             </button>
 
-            {/* User */}
+            {/* Cart */}
+            <button
+              onClick={openCart}
+              className="relative w-9 h-9 flex items-center justify-center rounded-xl text-[#7a5c60] hover:text-[#64020e] hover:bg-[#fdf2f2] transition-all"
+              aria-label={`Cart, ${totalItems} items`}
+            >
+              <ShoppingCart className="w-4 h-4" />
+              {totalItems > 0 && (
+                <span className="absolute -top-0.5 -right-0.5 bg-[#64020e] text-white rounded-full w-4 h-4 flex items-center justify-center text-[9px] font-bold">
+                  {totalItems > 9 ? '9+' : totalItems}
+                </span>
+              )}
+            </button>
+
+            {/* User avatar (when logged in) — desktop only */}
             {user ? (
-              <div className="relative">
+              <div className="relative hidden md:block">
                 <button
                   onClick={() => setUserMenuOpen(!userMenuOpen)}
-                  className="flex items-center gap-2 px-2.5 py-2 rounded-xl hover:bg-[#fdf2f2] transition-all duration-200"
+                  className="w-9 h-9 bg-[#64020e] text-white rounded-full flex items-center justify-center text-sm font-semibold ml-1"
                   aria-label="User menu"
-                  aria-expanded={userMenuOpen}
                 >
-                  <div className="w-8 h-8 bg-[#64020e] text-white rounded-full flex items-center justify-center text-sm font-semibold select-none">
-                    {user.name.charAt(0).toUpperCase()}
-                  </div>
-                  <ChevronDown
-                    className={`w-4 h-4 text-[#7a5c60] transition-transform duration-200 hidden sm:block ${
-                      userMenuOpen ? 'rotate-180' : ''
-                    }`}
-                  />
+                  {user.name.charAt(0).toUpperCase()}
                 </button>
 
                 {userMenuOpen && (
                   <>
-                    <div className="fixed inset-0 z-10" onClick={() => setUserMenuOpen(false)} aria-hidden="true" />
-                    <div className="absolute right-0 mt-2 w-60 bg-white border border-[#e8dede] rounded-2xl shadow-xl py-2 z-20 overflow-hidden">
-                      <div className="px-4 py-3.5 border-b border-[#f5f0ef]">
-                        <p className="text-base font-semibold text-[#1a0508] truncate">{user.name}</p>
-                        <p className="text-sm text-[#7a5c60] truncate mt-0.5">{user.email}</p>
+                    <div className="fixed inset-0 z-10" onClick={() => setUserMenuOpen(false)} />
+                    <div className="absolute right-0 mt-2 w-56 bg-white border border-[#e8dede] rounded-2xl shadow-xl py-2 z-20">
+                      <div className="px-4 py-3 border-b border-[#f5f0ef]">
+                        <p className="text-sm font-semibold text-[#1a0508] truncate">{user.name}</p>
+                        <p className="text-xs text-[#7a5c60] truncate mt-0.5">{user.email}</p>
                         {user.role === 'admin' && (
-                          <span className="inline-block mt-2 px-2.5 py-0.5 bg-[#64020e] text-white text-xs font-semibold rounded-full tracking-wide">
+                          <span className="inline-block mt-1.5 px-2 py-0.5 bg-[#64020e] text-white text-[10px] font-bold rounded-full tracking-wide">
                             ADMIN
                           </span>
                         )}
                       </div>
-                      <div className="py-1">
-                        <Link
-                          to="/dashboard"
-                          className="flex items-center gap-3 px-4 py-3 text-base text-[#1a0508] hover:bg-[#fdf2f2] hover:text-[#64020e] transition-colors"
-                          onClick={() => setUserMenuOpen(false)}
-                        >
-                          <LayoutDashboard className="w-4 h-4 text-[#7a5c60]" />
-                          Dashboard
-                        </Link>
-                        <button
-                          onClick={handleLogout}
-                          className="flex items-center gap-3 px-4 py-3 text-base text-[#1a0508] hover:bg-[#fdf2f2] hover:text-[#64020e] transition-colors w-full text-left"
-                        >
-                          <LogOut className="w-4 h-4 text-[#7a5c60]" />
-                          Sign Out
-                        </button>
-                      </div>
+                      <Link
+                        to="/dashboard"
+                        onClick={() => setUserMenuOpen(false)}
+                        className="flex items-center gap-3 px-4 py-2.5 text-sm text-[#1a0508] hover:bg-[#fdf2f2] hover:text-[#64020e] transition-colors"
+                      >
+                        <LayoutDashboard className="w-4 h-4 text-[#7a5c60]" />
+                        Dashboard
+                      </Link>
+                      <button
+                        onClick={handleLogout}
+                        className="flex items-center gap-3 px-4 py-2.5 text-sm text-[#1a0508] hover:bg-[#fdf2f2] hover:text-[#64020e] transition-colors w-full text-left"
+                      >
+                        <LogOut className="w-4 h-4 text-[#7a5c60]" />
+                        Sign Out
+                      </button>
                     </div>
                   </>
                 )}
@@ -147,81 +144,87 @@ export function Header({ onAuthClick, onSearchOpen }: HeaderProps) {
             ) : (
               <button
                 onClick={onAuthClick}
-                className="hidden sm:flex items-center gap-2 px-5 py-2.5 text-lg font-medium text-[#64020e] border-2 border-[#64020e] rounded-xl hover:bg-[#64020e] hover:text-white transition-all duration-200"
+                className="hidden sm:flex items-center gap-1.5 px-4 py-2 text-sm font-medium text-[#64020e] border-2 border-[#64020e] rounded-xl hover:bg-[#64020e] hover:text-white transition-all ml-1"
               >
-                <User className="w-4 h-4" />
+                <User className="w-3.5 h-3.5" />
                 Sign In
               </button>
             )}
 
-            {/* Cart */}
-            <button
-              onClick={openCart}
-              className="relative w-10 h-10 flex items-center justify-center rounded-xl text-[#7a5c60] hover:text-[#64020e] hover:bg-[#fdf2f2] transition-all duration-200"
-              aria-label={`Cart, ${totalItems} items`}
-            >
-              <ShoppingCart className="w-5 h-5" />
-              {totalItems > 0 && (
-                <span className="absolute -top-0.5 -right-0.5 bg-[#64020e] text-white rounded-full w-5 h-5 flex items-center justify-center text-[10px] font-bold">
-                  {totalItems > 9 ? '9+' : totalItems}
-                </span>
-              )}
-            </button>
-
             {/* Mobile hamburger */}
             <button
-              className="md:hidden w-10 h-10 flex items-center justify-center rounded-xl text-[#7a5c60] hover:text-[#64020e] hover:bg-[#fdf2f2] transition-all duration-200"
+              className="md:hidden w-9 h-9 flex items-center justify-center rounded-xl text-[#7a5c60] hover:text-[#64020e] hover:bg-[#fdf2f2] transition-all ml-1"
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
               aria-label={mobileMenuOpen ? 'Close menu' : 'Open menu'}
             >
-              {mobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+              {mobileMenuOpen ? <X className="w-4 h-4" /> : <Menu className="w-4 h-4" />}
             </button>
           </div>
         </div>
 
-        {/* ── Mobile Menu ───────────────────────────────────────────────── */}
+        {/* Mobile Menu */}
         {mobileMenuOpen && (
-          <div className="md:hidden border-t border-[#f5f0ef] py-3 pb-5">
-            <div className="flex flex-col gap-0.5">
-              {!user && (
-                <button
-                  onClick={onAuthClick}
-                  className="flex items-center gap-3 px-4 py-3.5 text-base text-[#1a0508] hover:bg-[#fdf2f2] hover:text-[#64020e] rounded-xl transition-colors"
-                >
-                  <User className="w-4 h-4 text-[#7a5c60]" />
-                  Sign In / Sign Up
-                </button>
-              )}
-              {navLinks.map(({ to, label }) => (
-                <Link
-                  key={to}
-                  to={to}
-                  className={`px-4 py-4 rounded-xl transition-colors text-lg font-medium ${
-                    isActive(to)
-                      ? 'bg-[#fdf2f2] text-[#64020e]'
-                      : 'text-[#7a5c60] hover:bg-[#fdf2f2] hover:text-[#64020e]'
-                  }`}
-                >
-                  {label}
-                </Link>
-              ))}
-              {user && (
-                <>
+          <div className="md:hidden border-t border-[#f5f0ef] py-2 pb-4">
+
+            {/* User info + actions (logged in) */}
+            {user ? (
+              <div className="px-4 py-3 mb-1 bg-[#fdf2f2] rounded-xl mx-0">
+                <div className="flex items-center gap-3 mb-3">
+                  <div className="w-9 h-9 bg-[#64020e] text-white rounded-full flex items-center justify-center text-sm font-semibold flex-shrink-0">
+                    {user.name.charAt(0).toUpperCase()}
+                  </div>
+                  <div className="min-w-0">
+                    <p className="text-sm font-semibold text-[#1a0508] truncate">{user.name}</p>
+                    <p className="text-xs text-[#7a5c60] truncate">{user.email}</p>
+                  </div>
+                  {user.role === 'admin' && (
+                    <span className="ml-auto px-2 py-0.5 bg-[#64020e] text-white text-[10px] font-bold rounded-full flex-shrink-0">
+                      ADMIN
+                    </span>
+                  )}
+                </div>
+                <div className="flex gap-2">
                   <Link
                     to="/dashboard"
-                    className="px-4 py-3.5 text-base text-[#7a5c60] hover:bg-[#fdf2f2] hover:text-[#64020e] rounded-xl transition-colors"
+                    onClick={() => setMobileMenuOpen(false)}
+                    className="flex-1 flex items-center justify-center gap-2 py-2 text-xs font-medium text-[#64020e] border border-[#64020e] rounded-lg hover:bg-[#64020e] hover:text-white transition-colors"
                   >
+                    <LayoutDashboard className="w-3.5 h-3.5" />
                     Dashboard
                   </Link>
                   <button
                     onClick={handleLogout}
-                    className="text-left px-4 py-3.5 text-base text-[#7a5c60] hover:bg-[#fdf2f2] hover:text-[#64020e] rounded-xl transition-colors"
+                    className="flex-1 flex items-center justify-center gap-2 py-2 text-xs font-medium text-[#7a5c60] border border-[#e8dede] rounded-lg hover:bg-white transition-colors"
                   >
+                    <LogOut className="w-3.5 h-3.5" />
                     Sign Out
                   </button>
-                </>
-              )}
-            </div>
+                </div>
+              </div>
+            ) : (
+              <button
+                onClick={() => { onAuthClick(); setMobileMenuOpen(false); }}
+                className="flex items-center gap-3 w-full px-4 py-3 text-sm text-[#1a0508] hover:bg-[#fdf2f2] hover:text-[#64020e] rounded-xl transition-colors"
+              >
+                <User className="w-4 h-4 text-[#7a5c60]" />
+                Sign In / Sign Up
+              </button>
+            )}
+
+            {/* Nav links */}
+            {navLinks.map(({ to, label }) => (
+              <Link
+                key={to}
+                to={to}
+                className={`block px-4 py-3 rounded-xl text-base font-medium transition-colors ${
+                  isActive(to)
+                    ? 'bg-[#fdf2f2] text-[#64020e]'
+                    : 'text-[#7a5c60] hover:bg-[#fdf2f2] hover:text-[#64020e]'
+                }`}
+              >
+                {label}
+              </Link>
+            ))}
           </div>
         )}
       </div>

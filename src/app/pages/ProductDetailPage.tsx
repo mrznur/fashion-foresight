@@ -6,7 +6,7 @@ import { SizeGuideModal } from '../components/SizeGuideModal';
 import { useCart } from '../context/CartContext';
 import { useWishlist } from '../context/WishlistContext';
 import { toast } from 'sonner';
-import { getProductById, getRelatedProducts } from '../../lib/products';
+import { useProduct, useRelatedProducts } from '../../lib/productsApi';
 import { parseProductId } from '../../lib/validation';
 
 export function ProductDetailPage() {
@@ -20,10 +20,15 @@ export function ProductDetailPage() {
   const { toggle, isLiked } = useWishlist();
 
   const productId = parseProductId(id);
-  const product = productId ? getProductById(productId) : null;
-  const relatedProducts = productId ? getRelatedProducts(productId) : [];
+  const { product, loading } = useProduct(productId ?? 0);
+  const relatedProducts = useRelatedProducts(productId ?? 0);
 
-  if (!product) return <Navigate to="/shop" replace />;
+  if (!productId || (!loading && !product)) return <Navigate to="/shop" replace />;
+  if (loading || !product) return (
+    <div className="min-h-[60vh] flex items-center justify-center">
+      <div className="w-8 h-8 border-2 border-[#f5f5f5] border-t-[#64020e] rounded-full animate-spin" />
+    </div>
+  );
 
   const liked = isLiked(product.id);
 

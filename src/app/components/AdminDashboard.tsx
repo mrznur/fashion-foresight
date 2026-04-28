@@ -1,12 +1,14 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import {
   Package, Users, DollarSign, TrendingUp, ShoppingBag, ArrowUpRight,
   LayoutDashboard, Settings, Bell, Search, Plus, Edit2, Trash2,
   Eye, Tag, AlertTriangle, CheckCircle, Clock, XCircle,
-  ChevronDown, Upload, X, Save, BarChart2, RefreshCw,
+  ChevronDown, X, Save, BarChart2, RefreshCw,
 } from 'lucide-react';
-import { PRODUCTS, CATEGORIES } from '../../lib/products';
+import { CATEGORIES } from '../../lib/products';
+import { fetchProducts, fetchAllOrders, createProduct, updateProduct, deleteProduct, updateOrderStatus, fetchSettings, saveSettings } from '../../lib/db';
 import type { Product } from '../../lib/types';
+import type { DbOrder } from '../../lib/db';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -53,18 +55,18 @@ function StatCard({ label, value, icon: Icon, change, positive }: {
   label: string; value: string; icon: React.ElementType; change: string; positive: boolean;
 }) {
   return (
-    <div className="bg-white rounded-2xl border border-[#e8dede] p-7 hover:shadow-md transition-all duration-200"> {/* Increased padding */}
-      <div className="flex items-start justify-between mb-5"> {/* Increased margin */}
-        <div className="w-12 h-12 bg-[#fdf2f2] rounded-xl flex items-center justify-center"> {/* Increased size */}
-          <Icon className="w-6 h-6 text-[#64020e]" /> {/* Increased icon size */}
+    <div className="bg-white rounded-2xl border border-[#e8dede] p-7 hover:shadow-md transition-all duration-200"> {}
+      <div className="flex items-start justify-between mb-5"> {}
+        <div className="w-12 h-12 bg-[#fdf2f2] rounded-xl flex items-center justify-center"> {}
+          <Icon className="w-6 h-6 text-[#64020e]" /> {}
         </div>
-        <span className={`text-base font-semibold flex items-center gap-1 ${positive ? 'text-emerald-600' : 'text-red-500'}`}> {/* Increased font size */}
+        <span className={`text-base font-semibold flex items-center gap-1 ${positive ? 'text-emerald-600' : 'text-red-500'}`}> {}
           <TrendingUp className="w-4 h-4" />
           {change}
         </span>
       </div>
-      <p className="text-4xl font-bold text-[#1a0508] mb-2 font-display">{value}</p> {/* Increased font size and margin */}
-      <p className="text-base text-[#7a5c60] font-medium">{label}</p> {/* Increased font size */}
+      <p className="text-4xl font-bold text-[#1a0508] mb-2 font-display">{value}</p> {}
+      <p className="text-base text-[#7a5c60] font-medium">{label}</p> {}
     </div>
   );
 }
@@ -73,8 +75,8 @@ function StatusBadge({ status }: { status: AdminOrder['status'] }) {
   const cfg = STATUS_CONFIG[status];
   const Icon = cfg.icon;
   return (
-    <span className={`inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-semibold rounded-full ${cfg.bg} ${cfg.text}`}> {/* Increased padding and font size */}
-      <Icon className="w-3.5 h-3.5" /> {/* Increased icon size */}
+    <span className={`inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-semibold rounded-full ${cfg.bg} ${cfg.text}`}> {}
+      <Icon className="w-3.5 h-3.5" /> {}
       {cfg.label}
     </span>
   );
@@ -83,70 +85,82 @@ function StatusBadge({ status }: { status: AdminOrder['status'] }) {
 // ─── Overview Tab ─────────────────────────────────────────────────────────────
 
 function OverviewTab() {
-  const stats = [
-    { label: 'Total Revenue', value: '$48,320', icon: DollarSign, change: '+12.5%', positive: true },
-    { label: 'Total Orders', value: '312', icon: ShoppingBag, change: '+8.2%', positive: true },
-    { label: 'Products', value: String(PRODUCTS.length), icon: Package, change: '+3', positive: true },
-    { label: 'Customers', value: '1,204', icon: Users, change: '+24%', positive: true },
-  ];
+  const [products, setProducts] = useState<Product[]>([]);
+  const [orders, setOrders] = useState<DbOrder[]>([]);
 
-  const lowStock = PRODUCTS.filter((p) => (p.stockCount ?? 0) <= 8);
+  useEffect(() => {
+    fetchProducts().then(setProducts);
+    fetchAllOrders().then(setOrders);
+  }, []);
+
+  const lowStock = products.filter((p) => (p.stockCount ?? 0) <= 8);
+  const totalRevenue = orders.reduce((sum, o) => sum + o.total, 0);
+
+  const stats = [
+    { label: 'Total Revenue', value: `$${totalRevenue.toLocaleString()}`, icon: DollarSign, change: '', positive: true },
+    { label: 'Total Orders', value: String(orders.length), icon: ShoppingBag, change: '', positive: true },
+    { label: 'Products', value: String(products.length), icon: Package, change: '', positive: true },
+    { label: 'Low Stock', value: String(lowStock.length), icon: AlertTriangle, change: '', positive: lowStock.length === 0 },
+  ];
 
   return (
     <div className="space-y-8">
-      {/* Stats */}
+      {}
       <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-5">
         {stats.map((s) => <StatCard key={s.label} {...s} />)}
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Recent Orders */}
+        {}
         <div className="lg:col-span-2 bg-white rounded-2xl border border-[#e8dede] overflow-hidden">
-          <div className="px-7 py-5 border-b border-[#f5f0ef] flex items-center justify-between"> {/* Increased padding */}
-            <h3 className="text-xl font-semibold text-[#1a0508] font-display">Recent Orders</h3> {/* Increased font size and added font-display */}
-            <button className="text-base text-[#64020e] font-semibold flex items-center gap-1 hover:gap-2 transition-all"> {/* Increased font size */}
+          <div className="px-7 py-5 border-b border-[#f5f0ef] flex items-center justify-between"> {}
+            <h3 className="text-xl font-semibold text-[#1a0508] font-display">Recent Orders</h3> {}
+            <button className="text-base text-[#64020e] font-semibold flex items-center gap-1 hover:gap-2 transition-all"> {}
               View all <ArrowUpRight className="w-4 h-4" />
             </button>
           </div>
           <div className="divide-y divide-[#f5f0ef]">
-            {MOCK_ORDERS.slice(0, 5).map((order) => (
-              <div key={order.id} className="px-7 py-5 flex items-center gap-4 hover:bg-[#faf9f8] transition-colors"> {/* Increased padding */}
-                <div className="w-10 h-10 bg-[#fdf2f2] rounded-xl flex items-center justify-center flex-shrink-0"> {/* Increased size */}
-                  <ShoppingBag className="w-5 h-5 text-[#64020e]" /> {/* Increased icon size */}
+            {orders.slice(0, 5).map((order) => (
+              <div key={order.id} className="px-7 py-5 flex items-center gap-4 hover:bg-[#faf9f8] transition-colors">
+                <div className="w-10 h-10 bg-[#fdf2f2] rounded-xl flex items-center justify-center flex-shrink-0">
+                  <ShoppingBag className="w-5 h-5 text-[#64020e]" />
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className="text-base font-semibold text-[#1a0508] truncate">{order.customer}</p> {/* Increased font size */}
-                  <p className="text-sm text-[#7a5c60] truncate">{order.product}</p> {/* Increased font size */}
+                  <p className="text-base font-semibold text-[#1a0508] truncate">{order.customer_name ?? 'Guest'}</p>
+                  <p className="text-sm text-[#7a5c60] truncate">{order.items.length} items</p>
                 </div>
                 <div className="text-right flex-shrink-0">
-                  <p className="text-base font-bold text-[#1a0508]">${order.total}</p> {/* Increased font size */}
+                  <p className="text-base font-bold text-[#1a0508]">${order.total}</p>
                   <StatusBadge status={order.status} />
                 </div>
               </div>
             ))}
+            {orders.length === 0 && (
+              <div className="py-12 text-center text-[#7a5c60]">No orders yet</div>
+            )}
           </div>
         </div>
 
-        {/* Low Stock Alert */}
+        {}
         <div className="bg-white rounded-2xl border border-[#e8dede] overflow-hidden">
-          <div className="px-7 py-5 border-b border-[#f5f0ef] flex items-center gap-2"> {/* Increased padding */}
-            <AlertTriangle className="w-5 h-5 text-amber-500" /> {/* Increased icon size */}
-            <h3 className="text-xl font-semibold text-[#1a0508] font-display">Low Stock</h3> {/* Increased font size and added font-display */}
-            <span className="ml-auto bg-amber-100 text-amber-700 text-sm font-bold px-3 py-1 rounded-full"> {/* Increased font size and padding */}
+          <div className="px-7 py-5 border-b border-[#f5f0ef] flex items-center gap-2"> {}
+            <AlertTriangle className="w-5 h-5 text-amber-500" /> {}
+            <h3 className="text-xl font-semibold text-[#1a0508] font-display">Low Stock</h3> {}
+            <span className="ml-auto bg-amber-100 text-amber-700 text-sm font-bold px-3 py-1 rounded-full"> {}
               {lowStock.length}
             </span>
           </div>
           <div className="divide-y divide-[#f5f0ef]">
             {lowStock.map((p) => (
-              <div key={p.id} className="px-7 py-4 flex items-center gap-3 hover:bg-[#faf9f8] transition-colors"> {/* Increased padding */}
-                <img src={p.image} alt={p.name} className="w-12 h-14 object-cover rounded-lg flex-shrink-0" /> {/* Increased size */}
+              <div key={p.id} className="px-7 py-4 flex items-center gap-3 hover:bg-[#faf9f8] transition-colors"> {}
+                <img src={p.image} alt={p.name} className="w-12 h-14 object-cover rounded-lg flex-shrink-0" /> {}
                 <div className="flex-1 min-w-0">
-                  <p className="text-base font-medium text-[#1a0508] truncate">{p.name}</p> {/* Increased font size */}
-                  <p className="text-sm text-[#7a5c60]">{p.category}</p> {/* Increased font size */}
+                  <p className="text-base font-medium text-[#1a0508] truncate">{p.name}</p> {}
+                  <p className="text-sm text-[#7a5c60]">{p.category}</p> {}
                 </div>
                 <span className={`text-sm font-bold px-3 py-1.5 rounded-lg flex-shrink-0 ${
                   (p.stockCount ?? 0) <= 3 ? 'bg-red-100 text-red-700' : 'bg-amber-100 text-amber-700'
-                }`}> {/* Increased font size and padding */}
+                }`}> {}
                   {p.stockCount} left
                 </span>
               </div>
@@ -161,78 +175,98 @@ function OverviewTab() {
 // ─── Orders Tab ───────────────────────────────────────────────────────────────
 
 function OrdersTab() {
+  const [orders, setOrders] = useState<DbOrder[]>([]);
+  const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
-  const [selectedOrder, setSelectedOrder] = useState<AdminOrder | null>(null);
+  const [selectedOrder, setSelectedOrder] = useState<DbOrder | null>(null);
+  const [pendingStatus, setPendingStatus] = useState<AdminOrder['status'] | null>(null);
 
-  const filtered = MOCK_ORDERS.filter((o) => {
-    const matchSearch = o.customer.toLowerCase().includes(search.toLowerCase()) ||
-      o.id.includes(search) || o.product.toLowerCase().includes(search.toLowerCase());
+  useEffect(() => {
+    fetchAllOrders().then((data) => { setOrders(data); setLoading(false); });
+  }, []);
+
+  const filtered = orders.filter((o) => {
+    const matchSearch =
+      (o.customer_name ?? '').toLowerCase().includes(search.toLowerCase()) ||
+      o.id.includes(search);
     const matchStatus = statusFilter === 'all' || o.status === statusFilter;
     return matchSearch && matchStatus;
   });
 
+  const openOrder = (order: DbOrder) => {
+    setSelectedOrder(order);
+    setPendingStatus(order.status);
+  };
+
+  const saveStatus = async () => {
+    if (!selectedOrder || !pendingStatus) return;
+    await updateOrderStatus(selectedOrder.id, pendingStatus);
+    setOrders((prev) =>
+      prev.map((o) => (o.id === selectedOrder.id ? { ...o, status: pendingStatus } : o))
+    );
+    setSelectedOrder(null);
+  };
+
   return (
     <div className="space-y-5">
-      {/* Enhanced Toolbar */}
-      <div className="flex flex-col sm:flex-row gap-4"> {/* Increased gap */}
+      <div className="flex flex-col sm:flex-row gap-3">
         <div className="relative flex-1">
-          <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-[#7a5c60]" />
+          <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-[#7a5c60]" />
           <input
-            id="admin-global-search"
-            name="admin-search"
+            id="orders-search"
+            name="orders-search"
             type="text"
             placeholder="Search orders, customers, products..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="w-full pl-12 pr-4 py-3 border-2 border-[#e8dede] rounded-xl text-lg text-[#1a0508] placeholder:text-[#7a5c60]/50 focus:outline-none focus:border-[#64020e] transition-colors"
+            className="w-full pl-11 pr-4 py-2.5 border-2 border-[#e8dede] rounded-xl text-base text-[#1a0508] placeholder:text-[#7a5c60]/50 focus:outline-none focus:border-[#64020e] transition-colors"
           />
         </div>
         <div className="relative">
           <select
+            id="orders-status-filter"
             value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value)}
-            className="appearance-none pl-4 pr-10 py-3 border-2 border-[#e8dede] rounded-xl text-lg text-[#1a0508] bg-white focus:outline-none focus:border-[#64020e] transition-colors cursor-pointer" /* Increased padding and font size */
+            className="appearance-none pl-4 pr-10 py-2.5 border-2 border-[#e8dede] rounded-xl text-base text-[#1a0508] bg-white focus:outline-none focus:border-[#64020e] transition-colors cursor-pointer"
           >
             <option value="all">All Statuses</option>
             {Object.entries(STATUS_CONFIG).map(([k, v]) => (
               <option key={k} value={k}>{v.label}</option>
             ))}
           </select>
-          <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5 text-[#7a5c60] pointer-events-none" /> {/* Increased icon size */}
+          <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#7a5c60] pointer-events-none" />
         </div>
       </div>
 
-      {/* Table */}
       <div className="bg-white rounded-2xl border border-[#e8dede] overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full">
-            <thead className="bg-[#faf9f8] border-b border-[#f5f0ef]">
+            <thead className="bg-[#faf9f8] border-b border-[#e8dede]">
               <tr>
-                {['Order', 'Customer', 'Product', 'Items', 'Total', 'Status', 'Date', ''].map((h) => (
-                  <th key={h} className="px-6 py-4 text-left text-sm uppercase tracking-widest font-bold text-[#7a5c60]">{h}</th> /* Increased padding and font size */
+                {['Order', 'Customer', 'Items', 'Total', 'Status', 'Date', ''].map((h) => (
+                  <th key={h} className="px-5 py-3.5 text-left text-xs uppercase tracking-widest font-bold text-[#7a5c60]">{h}</th>
                 ))}
               </tr>
             </thead>
             <tbody className="divide-y divide-[#f5f0ef]">
               {filtered.map((order) => (
                 <tr key={order.id} className="hover:bg-[#faf9f8] transition-colors">
-                  <td className="px-6 py-5 text-base font-bold text-[#64020e]">#{order.id}</td> /* Increased padding and font size */
-                  <td className="px-6 py-5"> /* Increased padding */
-                    <p className="text-base font-semibold text-[#1a0508]">{order.customer}</p> /* Increased font size */
-                    <p className="text-sm text-[#7a5c60]">{order.email}</p> /* Increased font size */
+                  <td className="px-5 py-4 text-sm font-bold text-[#64020e]">#{order.id.slice(0, 8)}</td>
+                  <td className="px-5 py-4">
+                    <p className="text-sm font-semibold text-[#1a0508]">{order.customer_name ?? 'Guest'}</p>
                   </td>
-                  <td className="px-6 py-5 text-base text-[#7a5c60] max-w-[160px] truncate">{order.product}</td> /* Increased padding and font size */
-                  <td className="px-6 py-5 text-base text-[#1a0508] font-medium">{order.items}</td> /* Increased padding and font size */
-                  <td className="px-6 py-5 text-base font-bold text-[#1a0508]">${order.total}</td> /* Increased padding and font size */
-                  <td className="px-6 py-5"><StatusBadge status={order.status} /></td> /* Increased padding */
-                  <td className="px-6 py-5 text-base text-[#7a5c60]">{order.date}</td> /* Increased padding and font size */
-                  <td className="px-6 py-5"> /* Increased padding */
+                  <td className="px-5 py-4 text-sm text-[#1a0508] font-medium">{order.items.length}</td>
+                  <td className="px-5 py-4 text-sm font-bold text-[#1a0508]">${order.total}</td>
+                  <td className="px-5 py-4"><StatusBadge status={order.status} /></td>
+                  <td className="px-5 py-4 text-sm text-[#7a5c60]">{new Date(order.created_at).toLocaleDateString()}</td>
+                  <td className="px-5 py-4">
                     <button
-                      onClick={() => setSelectedOrder(order)}
-                      className="w-9 h-9 flex items-center justify-center rounded-lg text-[#7a5c60] hover:text-[#64020e] hover:bg-[#fdf2f2] transition-all" /* Increased size */
+                      onClick={() => openOrder(order)}
+                      className="w-8 h-8 flex items-center justify-center rounded-lg text-[#7a5c60] hover:text-[#64020e] hover:bg-[#fdf2f2] transition-all"
+                      aria-label="View order"
                     >
-                      <Eye className="w-5 h-5" /> /* Increased icon size */
+                      <Eye className="w-4 h-4" />
                     </button>
                   </td>
                 </tr>
@@ -240,15 +274,19 @@ function OrdersTab() {
             </tbody>
           </table>
         </div>
-        {filtered.length === 0 && (
+        {!loading && filtered.length === 0 && (
           <div className="py-16 text-center">
             <ShoppingBag className="w-10 h-10 text-[#e8dede] mx-auto mb-3" />
-            <p className="text-[#7a5c60]">No orders match your search</p>
+            <p className="text-[#7a5c60]">{orders.length === 0 ? 'No orders yet' : 'No orders match your search'}</p>
+          </div>
+        )}
+        {loading && (
+          <div className="py-16 text-center">
+            <div className="w-6 h-6 border-2 border-[#f5f5f5] border-t-[#64020e] rounded-full animate-spin mx-auto" />
           </div>
         )}
       </div>
 
-      {/* Order Detail Modal */}
       {selectedOrder && (
         <>
           <div className="fixed inset-0 bg-black/50 z-50 backdrop-blur-sm" onClick={() => setSelectedOrder(null)} />
@@ -259,23 +297,24 @@ function OrdersTab() {
                   <p className="text-overline">Order Details</p>
                   <h3 className="text-xl font-semibold text-[#1a0508] mt-0.5">#{selectedOrder.id}</h3>
                 </div>
-                <button onClick={() => setSelectedOrder(null)} className="w-8 h-8 flex items-center justify-center rounded-xl text-[#7a5c60] hover:bg-[#fdf2f2] hover:text-[#64020e] transition-all">
-                  <X className="w-4.5 h-4.5" />
+                <button
+                  onClick={() => setSelectedOrder(null)}
+                  className="w-8 h-8 flex items-center justify-center rounded-xl text-[#7a5c60] hover:bg-[#fdf2f2] hover:text-[#64020e] transition-all"
+                >
+                  <X className="w-4 h-4" />
                 </button>
               </div>
               <div className="px-7 py-6 space-y-5">
                 <div className="grid grid-cols-2 gap-4">
                   {[
-                    { label: 'Customer', value: selectedOrder.customer },
-                    { label: 'Email', value: selectedOrder.email },
-                    { label: 'Product', value: selectedOrder.product },
-                    { label: 'Items', value: String(selectedOrder.items) },
+                    { label: 'Customer', value: selectedOrder.customer_name ?? 'Guest' },
+                    { label: 'Items', value: String(selectedOrder.items.length) },
                     { label: 'Total', value: `$${selectedOrder.total}` },
-                    { label: 'Date', value: selectedOrder.date },
+                    { label: 'Date', value: new Date(selectedOrder.created_at).toLocaleDateString() },
                   ].map(({ label, value }) => (
                     <div key={label}>
                       <p className="text-xs text-[#7a5c60] font-semibold uppercase tracking-wider mb-1">{label}</p>
-                      <p className="text-base font-medium text-[#1a0508]">{value}</p>
+                      <p className="text-sm font-medium text-[#1a0508] break-all">{value}</p>
                     </div>
                   ))}
                 </div>
@@ -283,11 +322,15 @@ function OrdersTab() {
                   <p className="text-xs text-[#7a5c60] font-semibold uppercase tracking-wider mb-2">Update Status</p>
                   <div className="flex flex-wrap gap-2">
                     {(Object.keys(STATUS_CONFIG) as AdminOrder['status'][]).map((s) => (
-                      <button key={s} className={`px-3 py-1.5 rounded-xl text-sm font-semibold border-2 transition-all ${
-                        selectedOrder.status === s
-                          ? 'border-[#64020e] bg-[#64020e] text-white'
-                          : 'border-[#e8dede] text-[#7a5c60] hover:border-[#64020e] hover:text-[#64020e]'
-                      }`}>
+                      <button
+                        key={s}
+                        onClick={() => setPendingStatus(s)}
+                        className={`px-3 py-1.5 rounded-xl text-sm font-semibold border-2 transition-all ${
+                          pendingStatus === s
+                            ? 'border-[#64020e] bg-[#64020e] text-white'
+                            : 'border-[#e8dede] text-[#7a5c60] hover:border-[#64020e] hover:text-[#64020e]'
+                        }`}
+                      >
                         {STATUS_CONFIG[s].label}
                       </button>
                     ))}
@@ -295,7 +338,7 @@ function OrdersTab() {
                 </div>
               </div>
               <div className="px-7 pb-6 flex gap-3">
-                <button className="btn-brand flex-1 justify-center py-3 text-sm">
+                <button onClick={saveStatus} className="btn-brand flex-1 justify-center py-3 text-sm">
                   <Save className="w-4 h-4" /> Save Changes
                 </button>
                 <button onClick={() => setSelectedOrder(null)} className="btn-outline flex-1 justify-center py-3 text-sm">
@@ -310,16 +353,23 @@ function OrdersTab() {
   );
 }
 
+
 // ─── Products Tab ─────────────────────────────────────────────────────────────
 
 function ProductsTab() {
-  const [products, setProducts] = useState<AdminProduct[]>(
-    PRODUCTS.map((p) => ({ ...p, discount: 0, featured: p.isNew ?? false }))
-  );
+  const [products, setProducts] = useState<AdminProduct[]>([]);
+  const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('All');
   const [editingProduct, setEditingProduct] = useState<AdminProduct | null>(null);
   const [showAddModal, setShowAddModal] = useState(false);
+
+  useEffect(() => {
+    fetchProducts().then((data) => {
+      setProducts(data.map((p) => ({ ...p, discount: 0, featured: p.isNew ?? false })));
+      setLoading(false);
+    });
+  }, []);
 
   const filtered = products.filter((p) => {
     const matchSearch = p.name.toLowerCase().includes(search.toLowerCase());
@@ -327,20 +377,21 @@ function ProductsTab() {
     return matchSearch && matchCat;
   });
 
-  const handleDelete = (id: number) => {
-    if (confirm('Delete this product?')) {
-      setProducts((prev) => prev.filter((p) => p.id !== id));
-    }
+  const handleDelete = async (id: number) => {
+    if (!confirm('Delete this product?')) return;
+    await deleteProduct(id);
+    setProducts((prev) => prev.filter((p) => p.id !== id));
   };
 
-  const handleSave = (updated: AdminProduct) => {
-    setProducts((prev) => prev.map((p) => p.id === updated.id ? updated : p));
+  const handleSave = async (updated: AdminProduct) => {
+    const { data } = await updateProduct(updated.id, updated);
+    if (data) setProducts((prev) => prev.map((p) => p.id === updated.id ? { ...data, discount: 0 } : p));
     setEditingProduct(null);
   };
 
   return (
     <div className="space-y-5">
-      {/* Toolbar */}
+      {}
       <div className="flex flex-col sm:flex-row gap-3">
         <div className="relative flex-1">
           <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-[#7a5c60]" />
@@ -372,7 +423,7 @@ function ProductsTab() {
         </button>
       </div>
 
-      {/* Products Grid */}
+      {}
       <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-5">
         {filtered.map((product) => (
           <div key={product.id} className="bg-white rounded-2xl border border-[#e8dede] overflow-hidden hover:shadow-md transition-all duration-200 group">
@@ -432,7 +483,7 @@ function ProductsTab() {
         ))}
       </div>
 
-      {/* Edit Product Modal */}
+      {}
       {editingProduct && (
         <ProductModal
           product={editingProduct}
@@ -442,7 +493,7 @@ function ProductsTab() {
         />
       )}
 
-      {/* Add Product Modal */}
+      {}
       {showAddModal && (
         <ProductModal
           product={{
@@ -459,8 +510,9 @@ function ProductsTab() {
             discount: 0,
             featured: false,
           }}
-          onSave={(p) => {
-            setProducts((prev) => [...prev, p]);
+          onSave={async (p) => {
+            const { data } = await createProduct(p);
+            if (data) setProducts((prev) => [...prev, { ...data, discount: 0 }]);
             setShowAddModal(false);
           }}
           onClose={() => setShowAddModal(false)}
@@ -502,7 +554,7 @@ function ProductModal({ product, onSave, onClose, title }: {
           </div>
 
           <div className="px-7 py-6 space-y-5">
-            {/* Image preview */}
+            {}
             <div>
               <label htmlFor="product-image-url" className="block text-sm font-semibold text-[#1a0508] mb-2">Product Image URL</label>
               <div className="flex gap-3">
@@ -605,7 +657,7 @@ function ProductModal({ product, onSave, onClose, title }: {
               />
             </div>
 
-            {/* Discount preview */}
+            {}
             {(form.discount ?? 0) > 0 && form.price > 0 && (
               <div className="bg-[#fdf2f2] border border-[#e8dede] rounded-xl p-4 flex items-center gap-3">
                 <Tag className="w-5 h-5 text-[#64020e] flex-shrink-0" />
@@ -702,53 +754,93 @@ function CustomersTab() {
 
 function SettingsTab() {
   const [saved, setSaved] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [values, setValues] = useState<Record<string, string>>({
+    store_name: '',
+    store_email: '',
+    support_phone: '',
+    store_address: '',
+    free_shipping_threshold: '',
+    default_currency: '',
+    return_window: '',
+  });
 
-  const handleSave = () => {
+  useEffect(() => {
+    fetchSettings().then((data) => {
+      if (Object.keys(data).length > 0) setValues((prev) => ({ ...prev, ...data }));
+    });
+  }, []);
+
+  const set = (key: string, value: string) =>
+    setValues((prev) => ({ ...prev, [key]: value }));
+
+  const handleSave = async () => {
+    setSaving(true);
+    const result = await saveSettings(values);
+    setSaving(false);
+    if (result.error) {
+      console.error('[settings] save failed:', result.error);
+      alert('Save failed: ' + result.error);
+      return;
+    }
     setSaved(true);
     setTimeout(() => setSaved(false), 2500);
   };
 
   const inputCls = "w-full px-4 py-2.5 border-2 border-[#e8dede] rounded-xl text-base text-[#1a0508] placeholder:text-[#7a5c60]/40 focus:outline-none focus:border-[#64020e] transition-colors bg-white";
 
+  const sections = [
+    {
+      title: 'Store Information',
+      fields: [
+        { label: 'Store Name',     key: 'store_name',     placeholder: 'Fashion Foresight',              type: 'text'  },
+        { label: 'Store Email',    key: 'store_email',    placeholder: 'hello@fashionforesight.com',     type: 'email' },
+        { label: 'Support Phone',  key: 'support_phone',  placeholder: '+1 (555) 000-0000',              type: 'tel'   },
+        { label: 'Store Address',  key: 'store_address',  placeholder: 'Via Montenapoleone 12, Milan',   type: 'text'  },
+      ],
+    },
+    {
+      title: 'Shipping & Orders',
+      fields: [
+        { label: 'Free Shipping Threshold ($)', key: 'free_shipping_threshold', placeholder: '200', type: 'number' },
+        { label: 'Default Currency',            key: 'default_currency',        placeholder: 'USD', type: 'text'   },
+        { label: 'Return Window (days)',         key: 'return_window',           placeholder: '30',  type: 'number' },
+      ],
+    },
+  ];
+
   return (
     <div className="max-w-2xl space-y-6">
-      {[
-        {
-          title: 'Store Information',
-          fields: [
-            { label: 'Store Name', placeholder: 'Fashion Foresight', type: 'text' },
-            { label: 'Store Email', placeholder: 'hello@fashionforesight.com', type: 'email' },
-            { label: 'Support Phone', placeholder: '+1 (555) 000-0000', type: 'tel' },
-            { label: 'Store Address', placeholder: 'Via Montenapoleone 12, Milan', type: 'text' },
-          ],
-        },
-        {
-          title: 'Shipping & Orders',
-          fields: [
-            { label: 'Free Shipping Threshold ($)', placeholder: '200', type: 'number' },
-            { label: 'Default Currency', placeholder: 'USD', type: 'text' },
-            { label: 'Return Window (days)', placeholder: '30', type: 'number' },
-          ],
-        },
-      ].map(({ title, fields }) => (
+      {sections.map(({ title, fields }) => (
         <div key={title} className="bg-white rounded-2xl border border-[#e8dede] p-6">
           <h3 className="text-lg font-semibold text-[#1a0508] mb-5">{title}</h3>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            {fields.map(({ label, placeholder, type }) => {
-              const fieldId = label.toLowerCase().replace(/[^a-z0-9]+/g, '-');
-              return (
-                <div key={label}>
-                  <label htmlFor={fieldId} className="block text-sm font-semibold text-[#1a0508] mb-1.5">{label}</label>
-                  <input id={fieldId} name={fieldId} type={type} placeholder={placeholder} className={inputCls} />
-                </div>
-              );
-            })}
+            {fields.map(({ label, key, placeholder, type }) => (
+              <div key={key}>
+                <label htmlFor={key} className="block text-sm font-semibold text-[#1a0508] mb-1.5">{label}</label>
+                <input
+                  id={key}
+                  name={key}
+                  type={type}
+                  placeholder={placeholder}
+                  value={values[key] ?? ''}
+                  onChange={(e) => set(key, e.target.value)}
+                  className={inputCls}
+                />
+              </div>
+            ))}
           </div>
         </div>
       ))}
 
-      <button onClick={handleSave} className={`btn-brand px-8 py-3 text-sm ${saved ? 'bg-emerald-600' : ''}`}>
-        {saved ? <><CheckCircle className="w-4 h-4" /> Saved!</> : <><Save className="w-4 h-4" /> Save Settings</>}
+      <button
+        onClick={handleSave}
+        disabled={saving}
+        className={`btn-brand px-8 py-3 text-sm ${saved ? 'bg-emerald-600' : ''}`}
+      >
+        {saving ? <><RefreshCw className="w-4 h-4 animate-spin" /> Saving...</>
+         : saved  ? <><CheckCircle className="w-4 h-4" /> Saved!</>
+         : <><Save className="w-4 h-4" /> Save Settings</>}
       </button>
     </div>
   );
@@ -769,19 +861,19 @@ export function AdminDashboard() {
 
   return (
     <div className="min-h-screen bg-[#faf9f8]">
-      {/* Enhanced Top bar with better styling */}
-      <div className="bg-white border-b border-[#e8dede] px-4 sm:px-6 lg:px-8 py-6"> {/* Increased padding */}
+      {}
+      <div className="bg-white border-b border-[#e8dede] px-4 sm:px-6 lg:px-8 py-6"> {}
         <div className="mx-auto max-w-7xl flex items-center justify-between">
           <div>
-            <p className="text-overline font-accent">Fashion Foresight</p> {/* Added font-accent */}
-            <h1 className="text-3xl font-semibold text-[#1a0508] mt-1 font-display">Admin Dashboard</h1> {/* Increased size and added font-display */}
+            <p className="text-overline font-accent">Fashion Foresight</p> {}
+            <h1 className="text-3xl font-semibold text-[#1a0508] mt-1 font-display">Admin Dashboard</h1> {}
           </div>
-          <div className="flex items-center gap-4"> {/* Increased gap */}
-            <button className="w-11 h-11 flex items-center justify-center rounded-xl text-[#7a5c60] hover:text-[#64020e] hover:bg-[#fdf2f2] transition-all relative"> {/* Increased size */}
+          <div className="flex items-center gap-4"> {}
+            <button className="w-11 h-11 flex items-center justify-center rounded-xl text-[#7a5c60] hover:text-[#64020e] hover:bg-[#fdf2f2] transition-all relative"> {}
               <Bell className="w-5 h-5" />
               <span className="absolute top-2 right-2 w-2 h-2 bg-[#64020e] rounded-full" />
             </button>
-            <button className="w-11 h-11 flex items-center justify-center rounded-xl text-[#7a5c60] hover:text-[#64020e] hover:bg-[#fdf2f2] transition-all"> {/* Increased size */}
+            <button className="w-11 h-11 flex items-center justify-center rounded-xl text-[#7a5c60] hover:text-[#64020e] hover:bg-[#fdf2f2] transition-all"> {}
               <RefreshCw className="w-5 h-5" />
             </button>
           </div>
@@ -789,8 +881,8 @@ export function AdminDashboard() {
       </div>
 
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-8">
-        {/* Enhanced Tab Navigation with larger fonts */}
-        <div className="flex gap-2 bg-white border border-[#e8dede] rounded-2xl p-2 mb-8 overflow-x-auto"> {/* Increased padding */}
+        {}
+        <div className="flex gap-2 bg-white border border-[#e8dede] rounded-2xl p-2 mb-8 overflow-x-auto"> {}
           {tabs.map(({ id, label, icon: Icon }) => (
             <button
               key={id}
@@ -807,7 +899,7 @@ export function AdminDashboard() {
           ))}
         </div>
 
-        {/* Tab Content */}
+        {}
         {activeTab === 'overview'  && <OverviewTab />}
         {activeTab === 'orders'    && <OrdersTab />}
         {activeTab === 'products'  && <ProductsTab />}

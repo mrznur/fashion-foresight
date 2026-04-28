@@ -2,13 +2,17 @@ import { Instagram, Facebook, Twitter, Mail, MapPin, Phone } from 'lucide-react'
 import { Link } from 'react-router';
 import { useState } from 'react';
 import { toast } from 'sonner';
+import { subscribeNewsletter } from '../../lib/db';
+import { useSettings } from '../../lib/useSettings';
 
 export function Footer() {
   const [email, setEmail] = useState('');
+  const s = useSettings();
 
-  const handleNewsletter = (e: React.FormEvent) => {
+  const handleNewsletter = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!email) return;
+    await subscribeNewsletter(email);
     toast.success('Subscribed!', { description: "You're now on the list." });
     setEmail('');
   };
@@ -22,15 +26,13 @@ export function Footer() {
 
           {/* Brand */}
           <div className="lg:col-span-1">
-            <Link to="/" className="inline-block mb-5" aria-label="Fashion Foresight — Home">
+            <div className="inline-block mb-5">
               <img
                 src="/images/logo-desktop.png"
                 alt="Fashion Foresight"
-                className="h-9 w-auto object-contain brightness-0 invert"
-                width={180}
-                height={36}
+                className="h-10 md:h-14 w-auto object-contain bg-white px-4 py-2 rounded-lg"
               />
-            </Link>
+            </div>
             <p className="text-white/60 text-base leading-relaxed mb-6">
               Modern sophistication meets Italian craftsmanship. Luxury menswear for the discerning gentleman.
             </p>
@@ -104,7 +106,7 @@ export function Footer() {
                 placeholder="Your email"
                 className="flex-1 px-4 py-3 bg-white/10 border border-white/15 rounded-xl text-lg text-white placeholder:text-white/40 focus:outline-none focus:border-[#64020e] transition-colors"
               />
-              <button type="submit" className="w-10 h-10 bg-[#64020e] rounded-xl flex items-center justify-center hover:bg-[#4a0109] transition-colors flex-shrink-0" aria-label="Subscribe">
+              <button type="submit" className="px-5 py-3 bg-[#64020e] rounded-xl flex items-center justify-center hover:bg-[#4a0109] transition-colors flex-shrink-0" aria-label="Subscribe">
                 <Mail className="w-4 h-4" />
               </button>
             </form>
@@ -113,11 +115,11 @@ export function Footer() {
             <div className="space-y-2.5">
               <div className="flex items-center gap-2.5 text-sm text-white/50">
                 <MapPin className="w-4 h-4 flex-shrink-0" />
-                Via Montenapoleone 12, Milan
+                {s.store_address}
               </div>
               <div className="flex items-center gap-2.5 text-sm text-white/50">
                 <Phone className="w-4 h-4 flex-shrink-0" />
-                +39 02 7600 1234
+                {s.support_phone}
               </div>
             </div>
           </div>
@@ -125,7 +127,7 @@ export function Footer() {
 
         {/* Bottom bar */}
         <div className="pt-8 border-t border-white/10 flex flex-col sm:flex-row items-center justify-between gap-4">
-          <p className="text-sm text-white/40">© 2026 Fashion Foresight. All rights reserved.</p>
+          <p className="text-sm text-white/40">© {s.copyright_year} {s.store_name}. All rights reserved.</p>
           <div className="flex items-center gap-6">
             <a href="#" className="text-sm text-white/40 hover:text-white/70 transition-colors">Privacy Policy</a>
             <a href="#" className="text-sm text-white/40 hover:text-white/70 transition-colors">Terms of Service</a>
