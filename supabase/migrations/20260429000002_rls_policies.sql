@@ -12,6 +12,11 @@ begin
 end;
 $$;
 
+drop trigger if exists set_profiles_updated_at on public.profiles;
+drop trigger if exists set_products_updated_at on public.products;
+drop trigger if exists set_orders_updated_at   on public.orders;
+drop trigger if exists on_auth_user_created    on auth.users;
+
 create trigger set_profiles_updated_at before update on public.profiles for each row execute procedure public.set_updated_at();
 create trigger set_products_updated_at before update on public.products for each row execute procedure public.set_updated_at();
 create trigger set_orders_updated_at    before update on public.orders    for each row execute procedure public.set_updated_at();
