@@ -1,12 +1,14 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import {
   Package, Users, DollarSign, TrendingUp, ShoppingBag, ArrowUpRight,
   LayoutDashboard, Settings, Bell, Search, Plus, Edit2, Trash2,
   Eye, Tag, AlertTriangle, CheckCircle, Clock, XCircle,
-  ChevronDown, X, Save, BarChart2, RefreshCw,
+  ChevronDown, X, Save, BarChart2, RefreshCw, Upload,
 } from 'lucide-react';
 import { CATEGORIES } from '../../lib/products';
 import { fetchProducts, fetchAllOrders, createProduct, updateProduct, deleteProduct, updateOrderStatus, fetchSettings, saveSettings } from '../../lib/db';
+import { supabase } from '../../lib/supabase';
+import { useCurrency } from '../../lib/useCurrency';
 import type { Product } from '../../lib/types';
 import type { DbOrder } from '../../lib/db';
 
@@ -14,32 +16,10 @@ import type { DbOrder } from '../../lib/db';
 
 type AdminTab = 'overview' | 'orders' | 'products' | 'customers' | 'settings';
 
-interface AdminOrder {
-  id: string;
-  customer: string;
-  email: string;
-  items: number;
-  total: number;
-  status: 'pending' | 'processing' | 'shipped' | 'delivered' | 'cancelled';
-  date: string;
-  product: string;
-}
-
 interface AdminProduct extends Product {
   discount?: number;
   featured?: boolean;
 }
-
-// ─── Mock Data ────────────────────────────────────────────────────────────────
-
-const MOCK_ORDERS: AdminOrder[] = [
-  { id: '1001', customer: 'James Harrington', email: 'james@example.com', items: 2, total: 1548, status: 'delivered', date: '2026-04-25', product: 'Classic Black Suit' },
-  { id: '1002', customer: 'Michael Chen', email: 'mchen@example.com', items: 1, total: 159, status: 'shipped', date: '2026-04-26', product: 'Tailored White Shirt' },
-  { id: '1003', customer: 'David Okafor', email: 'david.o@example.com', items: 3, total: 1227, status: 'processing', date: '2026-04-27', product: 'Biker Jacket Outfit' },
-  { id: '1004', customer: 'William Torres', email: 'wtorres@example.com', items: 1, total: 349, status: 'pending', date: '2026-04-27', product: 'Minimalist Watch' },
-  { id: '1005', customer: 'Robert Kim', email: 'rkim@example.com', items: 2, total: 878, status: 'delivered', date: '2026-04-24', product: 'Light Summer Suit' },
-  { id: '1006', customer: 'Thomas Müller', email: 'tmuller@example.com', items: 1, total: 429, status: 'cancelled', date: '2026-04-23', product: 'Leather Boots' },
-];
 
 const STATUS_CONFIG = {
   delivered:  { label: 'Delivered',  bg: 'bg-emerald-50', text: 'text-emerald-700', icon: CheckCircle },
@@ -71,7 +51,7 @@ function StatCard({ label, value, icon: Icon, change, positive }: {
   );
 }
 
-function StatusBadge({ status }: { status: AdminOrder['status'] }) {
+function StatusBadge({ status }: { status: DbOrder['status'] }) {
   const cfg = STATUS_CONFIG[status];
   const Icon = cfg.icon;
   return (
@@ -87,6 +67,7 @@ function StatusBadge({ status }: { status: AdminOrder['status'] }) {
 function OverviewTab() {
   const [products, setProducts] = useState<Product[]>([]);
   const [orders, setOrders] = useState<DbOrder[]>([]);
+  const { format } = useCurrency();
 
   useEffect(() => {
     fetchProducts().then(setProducts);
@@ -97,7 +78,7 @@ function OverviewTab() {
   const totalRevenue = orders.reduce((sum, o) => sum + o.total, 0);
 
   const stats = [
-    { label: 'Total Revenue', value: `$${totalRevenue.toLocaleString()}`, icon: DollarSign, change: '', positive: true },
+    { label: 'Total Revenue', value: format(totalRevenue), icon: DollarSign, change: '', positive: true },
     { label: 'Total Orders', value: String(orders.length), icon: ShoppingBag, change: '', positive: true },
     { label: 'Products', value: String(products.length), icon: Package, change: '', positive: true },
     { label: 'Low Stock', value: String(lowStock.length), icon: AlertTriangle, change: '', positive: lowStock.length === 0 },
@@ -130,7 +111,7 @@ function OverviewTab() {
                   <p className="text-sm text-[#7a5c60] truncate">{order.items.length} items</p>
                 </div>
                 <div className="text-right flex-shrink-0">
-                  <p className="text-base font-bold text-[#1a0508]">${order.total}</p>
+                  <p className="text-base font-bold text-[#1a0508]">{format(order.total)}</p>
                   <StatusBadge status={order.status} />
                 </div>
               </div>
@@ -180,7 +161,8 @@ function OrdersTab() {
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [selectedOrder, setSelectedOrder] = useState<DbOrder | null>(null);
-  const [pendingStatus, setPendingStatus] = useState<AdminOrder['status'] | null>(null);
+  const [pendingStatus, setPendingStatus] = useState<DbOrder['status'] | null>(null);
+  const { format } = useCurrency();
 
   useEffect(() => {
     fetchAllOrders().then((data) => { setOrders(data); setLoading(false); });
@@ -257,7 +239,7 @@ function OrdersTab() {
                     <p className="text-sm font-semibold text-[#1a0508]">{order.customer_name ?? 'Guest'}</p>
                   </td>
                   <td className="px-5 py-4 text-sm text-[#1a0508] font-medium">{order.items.length}</td>
-                  <td className="px-5 py-4 text-sm font-bold text-[#1a0508]">${order.total}</td>
+                  <td className="px-5 py-4 text-sm font-bold text-[#1a0508]">{format(order.total)}</td>
                   <td className="px-5 py-4"><StatusBadge status={order.status} /></td>
                   <td className="px-5 py-4 text-sm text-[#7a5c60]">{new Date(order.created_at).toLocaleDateString()}</td>
                   <td className="px-5 py-4">
@@ -309,7 +291,7 @@ function OrdersTab() {
                   {[
                     { label: 'Customer', value: selectedOrder.customer_name ?? 'Guest' },
                     { label: 'Items', value: String(selectedOrder.items.length) },
-                    { label: 'Total', value: `$${selectedOrder.total}` },
+                    { label: 'Total', value: format(selectedOrder.total) },
                     { label: 'Date', value: new Date(selectedOrder.created_at).toLocaleDateString() },
                   ].map(({ label, value }) => (
                     <div key={label}>
@@ -321,7 +303,7 @@ function OrdersTab() {
                 <div>
                   <p className="text-xs text-[#7a5c60] font-semibold uppercase tracking-wider mb-2">Update Status</p>
                   <div className="flex flex-wrap gap-2">
-                    {(Object.keys(STATUS_CONFIG) as AdminOrder['status'][]).map((s) => (
+                    {(Object.keys(STATUS_CONFIG) as DbOrder['status'][]).map((s) => (
                       <button
                         key={s}
                         onClick={() => setPendingStatus(s)}
@@ -363,10 +345,11 @@ function ProductsTab() {
   const [categoryFilter, setCategoryFilter] = useState('All');
   const [editingProduct, setEditingProduct] = useState<AdminProduct | null>(null);
   const [showAddModal, setShowAddModal] = useState(false);
+  const { format } = useCurrency();
 
   useEffect(() => {
     fetchProducts().then((data) => {
-      setProducts(data.map((p) => ({ ...p, discount: 0, featured: p.isNew ?? false })));
+      setProducts(data.map((p) => ({ ...p, discount: p.discount ?? 0, featured: p.isNew ?? false })));
       setLoading(false);
     });
   }, []);
@@ -385,7 +368,7 @@ function ProductsTab() {
 
   const handleSave = async (updated: AdminProduct) => {
     const { data } = await updateProduct(updated.id, updated);
-    if (data) setProducts((prev) => prev.map((p) => p.id === updated.id ? { ...data, discount: 0 } : p));
+    if (data) setProducts((prev) => prev.map((p) => p.id === updated.id ? { ...data, discount: data.discount ?? 0 } : p));
     setEditingProduct(null);
   };
 
@@ -460,12 +443,12 @@ function ProductsTab() {
                   {(product.discount ?? 0) > 0 ? (
                     <div className="flex items-center gap-2">
                       <span className="text-lg font-bold text-[#64020e]">
-                        ${(product.price * (1 - (product.discount ?? 0) / 100)).toFixed(0)}
+                        {format(Math.round(product.price * (1 - (product.discount ?? 0) / 100)))}
                       </span>
-                      <span className="text-sm text-[#7a5c60] line-through">${product.price}</span>
+                      <span className="text-sm text-[#7a5c60] line-through">{format(product.price)}</span>
                     </div>
                   ) : (
-                    <span className="text-lg font-bold text-[#1a0508]">${product.price}</span>
+                    <span className="text-lg font-bold text-[#1a0508]">{format(product.price)}</span>
                   )}
                 </div>
                 <span className={`text-xs font-semibold px-2.5 py-1 rounded-full ${
@@ -532,9 +515,73 @@ function ProductModal({ product, onSave, onClose, title }: {
   title: string;
 }) {
   const [form, setForm] = useState<AdminProduct>({ ...product });
+  const [uploading, setUploading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const { format } = useCurrency();
 
   const set = (key: keyof AdminProduct, value: unknown) =>
     setForm((prev) => ({ ...prev, [key]: value }));
+
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files ?? []);
+    if (!files.length) return;
+
+    const currentCount = (form.images ?? []).filter(Boolean).length;
+    const remaining = 6 - currentCount;
+    const toUpload = files.slice(0, remaining);
+
+    if (files.length > remaining) {
+      alert(`You can only add ${remaining} more image(s). Max 6 total.`);
+    }
+
+    setUploading(true);
+    try {
+      const uploaded: string[] = [];
+      for (const file of toUpload) {
+        if (!file.type.startsWith('image/')) continue;
+        if (file.size > 5 * 1024 * 1024) { alert(`${file.name} is over 5MB, skipped.`); continue; }
+
+        const ext = file.name.split('.').pop();
+        const safeName = (form.name || 'product').toLowerCase().replace(/[^a-z0-9]/g, '-');
+        const filename = `${safeName}-${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
+
+        const { data, error } = await supabase.storage
+          .from('products')
+          .upload(filename, file, { upsert: true });
+
+        if (error) throw error;
+
+        const { data: { publicUrl } } = supabase.storage
+          .from('products')
+          .getPublicUrl(data.path);
+
+        uploaded.push(publicUrl);
+      }
+
+      const newImages = [...(form.images ?? []).filter(Boolean), ...uploaded];
+      setForm((prev) => ({
+        ...prev,
+        images: newImages,
+        image: newImages[0] ?? prev.image, // first image is the main one
+      }));
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : JSON.stringify(err);
+      alert('Upload failed: ' + msg);
+      console.error('Upload error:', err);
+    } finally {
+      setUploading(false);
+      if (fileInputRef.current) fileInputRef.current.value = '';
+    }
+  };
+
+  const removeImage = (index: number) => {
+    const newImages = (form.images ?? []).filter((_, i) => i !== index);
+    setForm((prev) => ({
+      ...prev,
+      images: newImages,
+      image: newImages[0] ?? '',
+    }));
+  };
 
   const inputCls = "w-full px-4 py-2.5 border-2 border-[#e8dede] rounded-xl text-base text-[#1a0508] placeholder:text-[#7a5c60]/40 focus:outline-none focus:border-[#64020e] transition-colors bg-white";
 
@@ -554,23 +601,68 @@ function ProductModal({ product, onSave, onClose, title }: {
           </div>
 
           <div className="px-7 py-6 space-y-5">
-            {}
+            {/* Image upload — 3 min, 6 max */}
             <div>
-              <label htmlFor="product-image-url" className="block text-sm font-semibold text-[#1a0508] mb-2">Product Image URL</label>
-              <div className="flex gap-3">
-                <input
-                  id="product-image-url"
-                  name="product-image"
-                  type="text"
-                  value={form.image}
-                  onChange={(e) => set('image', e.target.value)}
-                  placeholder="https://..."
-                  className={`${inputCls} flex-1`}
-                />
-                {form.image && (
-                  <img src={form.image} alt="" className="w-12 h-14 object-cover rounded-xl border border-[#e8dede] flex-shrink-0" />
+              <div className="flex items-center justify-between mb-2">
+                <label className="block text-sm font-semibold text-[#1a0508]">
+                  Product Images
+                  <span className="ml-2 text-xs font-normal text-[#7a5c60]">
+                    {(form.images ?? []).filter(Boolean).length}/6
+                    {(form.images ?? []).filter(Boolean).length < 3 && (
+                      <span className="text-amber-600"> · min 3 required</span>
+                    )}
+                  </span>
+                </label>
+                {(form.images ?? []).filter(Boolean).length < 6 && (
+                  <button
+                    type="button"
+                    onClick={() => fileInputRef.current?.click()}
+                    disabled={uploading}
+                    className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-[#64020e] border border-[#64020e] rounded-lg hover:bg-[#fdf2f2] transition-colors disabled:opacity-50"
+                  >
+                    {uploading ? <RefreshCw className="w-3 h-3 animate-spin" /> : <Upload className="w-3 h-3" />}
+                    {uploading ? 'Uploading...' : 'Add Photos'}
+                  </button>
                 )}
               </div>
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/*"
+                multiple
+                className="hidden"
+                onChange={handleImageUpload}
+              />
+              <div className="grid grid-cols-3 gap-2">
+                {/* Existing images */}
+                {(form.images ?? []).filter(Boolean).map((img, i) => (
+                  <div key={i} className="relative aspect-square rounded-xl overflow-hidden bg-[#f5f5f5] group">
+                    <img src={img} alt={`Product ${i + 1}`} className="w-full h-full object-cover" />
+                    {i === 0 && (
+                      <span className="absolute top-1 left-1 bg-[#64020e] text-white text-[9px] font-bold px-1.5 py-0.5 rounded-full">MAIN</span>
+                    )}
+                    <button
+                      type="button"
+                      onClick={() => removeImage(i)}
+                      className="absolute top-1 right-1 w-6 h-6 bg-black/60 text-white rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                    >
+                      <X className="w-3 h-3" />
+                    </button>
+                  </div>
+                ))}
+                {/* Empty slots */}
+                {Array.from({ length: Math.max(0, 3 - (form.images ?? []).filter(Boolean).length) }).map((_, i) => (
+                  <div
+                    key={`empty-${i}`}
+                    onClick={() => fileInputRef.current?.click()}
+                    className="aspect-square rounded-xl border-2 border-dashed border-[#e8dede] flex flex-col items-center justify-center cursor-pointer hover:border-[#64020e] transition-colors bg-[#faf9f8]"
+                  >
+                    <Upload className="w-4 h-4 text-[#7a5c60] mb-1" />
+                    <span className="text-[10px] text-[#7a5c60]">Add photo</span>
+                  </div>
+                ))}
+              </div>
+              <p className="text-xs text-[#7a5c60] mt-2">First image is the main display image. Max 5MB per photo.</p>
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -599,7 +691,7 @@ function ProductModal({ product, onSave, onClose, title }: {
                 </div>
               </div>
               <div>
-                <label htmlFor="product-price" className="block text-sm font-semibold text-[#1a0508] mb-2">Price ($)</label>
+                <label htmlFor="product-price" className="block text-sm font-semibold text-[#1a0508] mb-2">Price (BDT)</label>
                 <input id="product-price" name="product-price" type="number" min={0} value={form.price} onChange={(e) => set('price', Number(e.target.value))} className={inputCls} />
               </div>
               <div>
@@ -689,21 +781,22 @@ function ProductModal({ product, onSave, onClose, title }: {
 // ─── Customers Tab ────────────────────────────────────────────────────────────
 
 function CustomersTab() {
-  const customers = [
-    { id: 1, name: 'James Harrington', email: 'james@example.com', orders: 4, spent: 3240, joined: '2025-01-12', status: 'active' },
-    { id: 2, name: 'Michael Chen', email: 'mchen@example.com', orders: 2, spent: 808, joined: '2025-03-05', status: 'active' },
-    { id: 3, name: 'David Okafor', email: 'david.o@example.com', orders: 7, spent: 5890, joined: '2024-11-20', status: 'vip' },
-    { id: 4, name: 'William Torres', email: 'wtorres@example.com', orders: 1, spent: 349, joined: '2026-02-14', status: 'new' },
-    { id: 5, name: 'Robert Kim', email: 'rkim@example.com', orders: 3, spent: 1876, joined: '2025-06-08', status: 'active' },
-    { id: 6, name: 'Thomas Müller', email: 'tmuller@example.com', orders: 0, spent: 0, joined: '2026-04-01', status: 'inactive' },
-  ];
+  const [customers, setCustomers] = useState<Array<{
+    id: string; name: string; role: string; created_at: string;
+  }>>([]);
+  const [loading, setLoading] = useState(true);
 
-  const statusCfg: Record<string, { bg: string; text: string }> = {
-    vip:      { bg: 'bg-amber-100', text: 'text-amber-700' },
-    active:   { bg: 'bg-emerald-100', text: 'text-emerald-700' },
-    new:      { bg: 'bg-blue-100', text: 'text-blue-700' },
-    inactive: { bg: 'bg-[#f5f0ef]', text: 'text-[#7a5c60]' },
-  };
+  useEffect(() => {
+    supabase
+      .from('profiles')
+      .select('id, name, role, created_at')
+      .order('created_at', { ascending: false })
+      .then(({ data }) => {
+        // Also get emails from auth — we only have what's in profiles
+        setCustomers(data ?? []);
+        setLoading(false);
+      });
+  }, []);
 
   return (
     <div className="bg-white rounded-2xl border border-[#e8dede] overflow-hidden">
@@ -715,37 +808,46 @@ function CustomersTab() {
         <table className="w-full">
           <thead className="bg-[#faf9f8] border-b border-[#f5f0ef]">
             <tr>
-              {['Customer', 'Email', 'Orders', 'Total Spent', 'Joined', 'Status'].map((h) => (
+              {['Customer', 'Role', 'Joined'].map((h) => (
                 <th key={h} className="px-5 py-3.5 text-left text-xs uppercase tracking-widest font-bold text-[#7a5c60]">{h}</th>
               ))}
             </tr>
           </thead>
           <tbody className="divide-y divide-[#f5f0ef]">
-            {customers.map((c) => {
-              const s = statusCfg[c.status];
-              return (
-                <tr key={c.id} className="hover:bg-[#faf9f8] transition-colors">
-                  <td className="px-5 py-4">
-                    <div className="flex items-center gap-3">
-                      <div className="w-9 h-9 bg-[#fdf2f2] rounded-full flex items-center justify-center text-sm font-bold text-[#64020e] flex-shrink-0">
-                        {c.name.charAt(0)}
-                      </div>
-                      <span className="text-sm font-semibold text-[#1a0508]">{c.name}</span>
+            {customers.map((c) => (
+              <tr key={c.id} className="hover:bg-[#faf9f8] transition-colors">
+                <td className="px-5 py-4">
+                  <div className="flex items-center gap-3">
+                    <div className="w-9 h-9 bg-[#fdf2f2] rounded-full flex items-center justify-center text-sm font-bold text-[#64020e] flex-shrink-0">
+                      {c.name.charAt(0).toUpperCase()}
                     </div>
-                  </td>
-                  <td className="px-5 py-4 text-sm text-[#7a5c60]">{c.email}</td>
-                  <td className="px-5 py-4 text-sm font-semibold text-[#1a0508]">{c.orders}</td>
-                  <td className="px-5 py-4 text-sm font-bold text-[#1a0508]">${c.spent.toLocaleString()}</td>
-                  <td className="px-5 py-4 text-sm text-[#7a5c60]">{c.joined}</td>
-                  <td className="px-5 py-4">
-                    <span className={`px-2.5 py-1 text-xs font-semibold rounded-full capitalize ${s.bg} ${s.text}`}>{c.status}</span>
-                  </td>
-                </tr>
-              );
-            })}
+                    <span className="text-sm font-semibold text-[#1a0508]">{c.name}</span>
+                  </div>
+                </td>
+                <td className="px-5 py-4">
+                  <span className={`px-2.5 py-1 text-xs font-semibold rounded-full capitalize ${
+                    c.role === 'admin' ? 'bg-[#fdf2f2] text-[#64020e]' : 'bg-emerald-50 text-emerald-700'
+                  }`}>{c.role}</span>
+                </td>
+                <td className="px-5 py-4 text-sm text-[#7a5c60]">
+                  {new Date(c.created_at).toLocaleDateString()}
+                </td>
+              </tr>
+            ))}
           </tbody>
         </table>
       </div>
+      {!loading && customers.length === 0 && (
+        <div className="py-16 text-center">
+          <Users className="w-10 h-10 text-[#e8dede] mx-auto mb-3" />
+          <p className="text-[#7a5c60]">No customers yet</p>
+        </div>
+      )}
+      {loading && (
+        <div className="py-16 text-center">
+          <div className="w-6 h-6 border-2 border-[#f5f5f5] border-t-[#64020e] rounded-full animate-spin mx-auto" />
+        </div>
+      )}
     </div>
   );
 }
@@ -850,6 +952,32 @@ function SettingsTab() {
 
 export function AdminDashboard() {
   const [activeTab, setActiveTab] = useState<AdminTab>('overview');
+  const [newOrderCount, setNewOrderCount] = useState(0);
+  const [lastChecked, setLastChecked] = useState<string | null>(
+    () => localStorage.getItem('admin_last_checked_orders')
+  );
+
+  // Poll for new orders every 30 seconds
+  useEffect(() => {
+    const check = async () => {
+      const orders = await fetchAllOrders();
+      const unseen = orders.filter(o =>
+        !lastChecked || new Date(o.created_at) > new Date(lastChecked)
+      );
+      setNewOrderCount(unseen.length);
+    };
+    check();
+    const interval = setInterval(check, 30000);
+    return () => clearInterval(interval);
+  }, [lastChecked]);
+
+  const handleBellClick = () => {
+    const now = new Date().toISOString();
+    localStorage.setItem('admin_last_checked_orders', now);
+    setLastChecked(now);
+    setNewOrderCount(0);
+    setActiveTab('orders');
+  };
 
   const tabs: { id: AdminTab; label: string; icon: React.ElementType }[] = [
     { id: 'overview',   label: 'Overview',   icon: LayoutDashboard },
@@ -861,19 +989,30 @@ export function AdminDashboard() {
 
   return (
     <div className="min-h-screen bg-[#faf9f8]">
-      {}
-      <div className="bg-white border-b border-[#e8dede] px-4 sm:px-6 lg:px-8 py-6"> {}
+      <div className="bg-white border-b border-[#e8dede] px-4 sm:px-6 lg:px-8 py-6">
         <div className="mx-auto max-w-7xl flex items-center justify-between">
           <div>
-            <p className="text-overline font-accent">Fashion Foresight</p> {}
-            <h1 className="text-3xl font-semibold text-[#1a0508] mt-1 font-display">Admin Dashboard</h1> {}
+            <p className="text-overline font-accent">Fashion Foresight</p>
+            <h1 className="text-3xl font-semibold text-[#1a0508] mt-1 font-display">Admin Dashboard</h1>
           </div>
-          <div className="flex items-center gap-4"> {}
-            <button className="w-11 h-11 flex items-center justify-center rounded-xl text-[#7a5c60] hover:text-[#64020e] hover:bg-[#fdf2f2] transition-all relative"> {}
+          <div className="flex items-center gap-4">
+            <button
+              onClick={handleBellClick}
+              className="w-11 h-11 flex items-center justify-center rounded-xl text-[#7a5c60] hover:text-[#64020e] hover:bg-[#fdf2f2] transition-all relative"
+              aria-label={`Notifications${newOrderCount > 0 ? ` (${newOrderCount} new)` : ''}`}
+            >
               <Bell className="w-5 h-5" />
-              <span className="absolute top-2 right-2 w-2 h-2 bg-[#64020e] rounded-full" />
+              {newOrderCount > 0 && (
+                <span className="absolute top-1.5 right-1.5 w-4 h-4 bg-[#64020e] text-white rounded-full text-[9px] font-bold flex items-center justify-center">
+                  {newOrderCount > 9 ? '9+' : newOrderCount}
+                </span>
+              )}
             </button>
-            <button className="w-11 h-11 flex items-center justify-center rounded-xl text-[#7a5c60] hover:text-[#64020e] hover:bg-[#fdf2f2] transition-all"> {}
+            <button
+              onClick={() => window.location.reload()}
+              className="w-11 h-11 flex items-center justify-center rounded-xl text-[#7a5c60] hover:text-[#64020e] hover:bg-[#fdf2f2] transition-all"
+              aria-label="Refresh"
+            >
               <RefreshCw className="w-5 h-5" />
             </button>
           </div>
@@ -881,8 +1020,7 @@ export function AdminDashboard() {
       </div>
 
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-8">
-        {}
-        <div className="flex gap-2 bg-white border border-[#e8dede] rounded-2xl p-2 mb-8 overflow-x-auto"> {}
+        <div className="flex gap-2 bg-white border border-[#e8dede] rounded-2xl p-2 mb-8 overflow-x-auto">
           {tabs.map(({ id, label, icon: Icon }) => (
             <button
               key={id}
@@ -895,11 +1033,15 @@ export function AdminDashboard() {
             >
               <Icon className="w-5 h-5" />
               {label}
+              {id === 'orders' && newOrderCount > 0 && (
+                <span className="bg-[#64020e] text-white text-[9px] font-bold rounded-full w-4 h-4 flex items-center justify-center">
+                  {newOrderCount}
+                </span>
+              )}
             </button>
           ))}
         </div>
 
-        {}
         {activeTab === 'overview'  && <OverviewTab />}
         {activeTab === 'orders'    && <OrdersTab />}
         {activeTab === 'products'  && <ProductsTab />}

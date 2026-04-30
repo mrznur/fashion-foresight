@@ -1,7 +1,18 @@
 import { X, Search, ArrowRight, TrendingUp } from 'lucide-react';
 import { useState, useEffect, useRef } from 'react';
 import { Link } from 'react-router';
-import { searchProducts, CATEGORIES } from '../../lib/products';
+import { CATEGORIES } from '../../lib/products';
+import { supabase } from '../../lib/supabase';
+import { useCurrency } from '../../lib/useCurrency';
+
+interface SearchResult {
+  id: number;
+  name: string;
+  price: number;
+  image: string;
+  category: string;
+  gender: string;
+}
 
 interface SearchOverlayProps {
   isOpen: boolean;
@@ -10,6 +21,9 @@ interface SearchOverlayProps {
 
 export function SearchOverlay({ isOpen, onClose }: SearchOverlayProps) {
   const [query, setQuery] = useState('');
+  const [results, setResults] = useState<SearchResult[]>([]);
+  const [searching, setSearching] = useState(false);
+  const { format } = useCurrency();
   const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -19,6 +33,7 @@ export function SearchOverlay({ isOpen, onClose }: SearchOverlayProps) {
     } else {
       document.body.style.overflow = '';
       setQuery('');
+      setResults([]);
     }
     return () => { document.body.style.overflow = ''; };
   }, [isOpen]);
@@ -29,7 +44,42 @@ export function SearchOverlay({ isOpen, onClose }: SearchOverlayProps) {
     return () => window.removeEventListener('keydown', handleKey);
   }, [onClose]);
 
-  const results = query.trim().length > 1 ? searchProducts(query) : [];
+  useEffect(() => {
+    const trimmed = query.trim();
+    if (trimmed.length <= 1) {
+      setResults([]);
+      return;
+    }
+
+    let cancelled = false;
+    setSearching(true);
+
+    supabase
+      .from('products')
+      .select('*')
+      .ilike('name', `%${trimmed}%`)
+      .limit(10)
+      .then(({ data, error }) => {
+        if (cancelled) return;
+        if (error || !data) {
+          setResults([]);
+        } else {
+          setResults(
+            data.map((row: Record<string, unknown>) => ({
+              id:       row.id as number,
+              name:     row.name as string,
+              price:    Number(row.price),
+              image:    (row.image as string) ?? '',
+              category: row.category as string,
+              gender:   row.gender as string,
+            }))
+          );
+        }
+        setSearching(false);
+      });
+
+    return () => { cancelled = true; };
+  }, [query]);
 
   if (!isOpen) return null;
 
@@ -60,7 +110,11 @@ export function SearchOverlay({ isOpen, onClose }: SearchOverlayProps) {
       {/* Results */}
       <div className="flex-1 overflow-y-auto px-4 sm:px-8 py-8 max-w-3xl mx-auto w-full">
         {query.trim().length > 1 ? (
-          results.length > 0 ? (
+          searching ? (
+            <div className="flex justify-center py-20">
+              <div className="w-7 h-7 border-2 border-[#f5f5f5] border-t-[#64020e] rounded-full animate-spin" />
+            </div>
+          ) : results.length > 0 ? (
             <div>
               <p className="text-xs text-[#737373] uppercase tracking-widest font-semibold mb-5">
                 {results.length} result{results.length !== 1 ? 's' : ''} for "{query}"
@@ -82,7 +136,7 @@ export function SearchOverlay({ isOpen, onClose }: SearchOverlayProps) {
                     <div className="flex-1 min-w-0">
                       <p className="text-[10px] text-[#64020e] uppercase tracking-widest font-semibold mb-0.5">{product.category}</p>
                       <p className="text-sm font-medium text-[#1a0508] group-hover:text-[#64020e] transition-colors truncate">{product.name}</p>
-                      <p className="text-sm font-semibold text-[#1a0508] mt-0.5">${product.price.toFixed(2)}</p>
+                      <p className="text-sm font-semibold text-[#1a0508] mt-0.5">{format(product.price)}</p>
                     </div>
                     <ArrowRight className="w-4 h-4 text-[#d4d4d4] group-hover:text-[#64020e] transition-colors flex-shrink-0" />
                   </Link>

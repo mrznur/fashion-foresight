@@ -40,7 +40,6 @@ async function supabaseSignIn(
   });
 
   if (error) {
-    // Normalize Supabase error messages for security (don't leak info)
     if (error.message.includes('Invalid login credentials')) {
       return { data: null, error: 'Invalid email or password.' };
     }
@@ -52,12 +51,24 @@ async function supabaseSignIn(
 
   if (!data.user) return { data: null, error: 'Sign in failed. Please try again.' };
 
+  // Read role from public.profiles (source of truth)
+  let profile: { name: string; role: string } | null = null;
+  try {
+    const result = await Promise.race([
+      supabase.from('profiles').select('name, role').eq('id', data.user.id).single(),
+      new Promise<never>((_, reject) => setTimeout(() => reject(new Error('timeout')), 3000)),
+    ]) as { data: { name: string; role: string } | null };
+    profile = result.data;
+  } catch {
+    // Profile fetch failed or timed out — fall back to metadata
+  }
+
   const meta = data.user.user_metadata;
   const user: User = {
     id: data.user.id,
     email: data.user.email!,
-    name: meta?.name ?? data.user.email!.split('@')[0],
-    role: (meta?.role as 'user' | 'admin') ?? 'user',
+    name: profile?.name ?? meta?.name ?? data.user.email!.split('@')[0],
+    role: (profile?.role as 'user' | 'admin') ?? 'user',
     createdAt: data.user.created_at,
   };
 
@@ -72,12 +83,24 @@ async function supabaseGetSession(): Promise<User | null> {
   const { data: { session } } = await supabase.auth.getSession();
   if (!session?.user) return null;
 
+  // Read role from public.profiles (source of truth)
+  let profile: { name: string; role: string } | null = null;
+  try {
+    const result = await Promise.race([
+      supabase.from('profiles').select('name, role').eq('id', session.user.id).single(),
+      new Promise<never>((_, reject) => setTimeout(() => reject(new Error('timeout')), 3000)),
+    ]) as { data: { name: string; role: string } | null };
+    profile = result.data;
+  } catch {
+    // fall back to metadata
+  }
+
   const meta = session.user.user_metadata;
   return {
     id: session.user.id,
     email: session.user.email!,
-    name: meta?.name ?? session.user.email!.split('@')[0],
-    role: (meta?.role as 'user' | 'admin') ?? 'user',
+    name: profile?.name ?? meta?.name ?? session.user.email!.split('@')[0],
+    role: (profile?.role as 'user' | 'admin') ?? 'user',
     createdAt: session.user.created_at,
   };
 }
@@ -235,17 +258,30 @@ export const auth = {
       // No-op for demo mode
       return { data: { subscription: { unsubscribe: () => {} } } };
     }
-    return supabase.auth.onAuthStateChange((_event, session) => {
+    return supabase.auth.onAuthStateChange(async (_event, session) => {
       if (!session?.user) {
         callback(null);
         return;
       }
+
+      // Read role from public.profiles
+      let profile: { name: string; role: string } | null = null;
+      try {
+        const result = await Promise.race([
+          supabase.from('profiles').select('name, role').eq('id', session.user.id).single(),
+          new Promise<never>((_, reject) => setTimeout(() => reject(new Error('timeout')), 3000)),
+        ]) as { data: { name: string; role: string } | null };
+        profile = result.data;
+      } catch {
+        // fall back to metadata
+      }
+
       const meta = session.user.user_metadata;
       callback({
         id: session.user.id,
         email: session.user.email!,
-        name: meta?.name ?? session.user.email!.split('@')[0],
-        role: (meta?.role as 'user' | 'admin') ?? 'user',
+        name: profile?.name ?? meta?.name ?? session.user.email!.split('@')[0],
+        role: (profile?.role as 'user' | 'admin') ?? 'user',
         createdAt: session.user.created_at,
       });
     });

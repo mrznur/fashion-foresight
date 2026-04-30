@@ -84,19 +84,21 @@ export function Header({ onAuthClick, onSearchOpen }: HeaderProps) {
               <Search className="w-4 h-4" />
             </button>
 
-            {/* Cart */}
-            <button
-              onClick={openCart}
-              className="relative w-9 h-9 flex items-center justify-center rounded-xl text-[#7a5c60] hover:text-[#64020e] hover:bg-[#fdf2f2] transition-all"
-              aria-label={`Cart, ${totalItems} items`}
-            >
-              <ShoppingCart className="w-4 h-4" />
-              {totalItems > 0 && (
-                <span className="absolute -top-0.5 -right-0.5 bg-[#64020e] text-white rounded-full w-4 h-4 flex items-center justify-center text-[9px] font-bold">
-                  {totalItems > 9 ? '9+' : totalItems}
-                </span>
-              )}
-            </button>
+            {/* Cart — hidden for admin */}
+            {!user || user.role !== 'admin' ? (
+              <button
+                onClick={openCart}
+                className="relative w-9 h-9 flex items-center justify-center rounded-xl text-[#7a5c60] hover:text-[#64020e] hover:bg-[#fdf2f2] transition-all"
+                aria-label={`Cart, ${totalItems} items`}
+              >
+                <ShoppingCart className="w-4 h-4" />
+                {totalItems > 0 && (
+                  <span className="absolute -top-0.5 -right-0.5 bg-[#64020e] text-white rounded-full w-4 h-4 flex items-center justify-center text-[9px] font-bold">
+                    {totalItems > 9 ? '9+' : totalItems}
+                  </span>
+                )}
+              </button>
+            ) : null}
 
             {/* User avatar (when logged in) — desktop only */}
             {user ? (

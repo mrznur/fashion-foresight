@@ -5,21 +5,26 @@ import { PRODUCTS as STATIC_PRODUCTS } from './products';
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 function rowToProduct(row: Record<string, unknown>): Product {
+  const price = Number(row.price);
+  const discount = row.discount ? Number(row.discount) : undefined;
+  const discountedPrice = discount && discount > 0 ? Math.round(price * (1 - discount / 100)) : price;
   return {
-    id:          row.id as number,
-    name:        row.name as string,
-    price:       Number(row.price),
-    image:       row.image as string,
-    images:      (row.images as string[]) ?? [],
-    category:    row.category as string,
-    gender:      row.gender as Product['gender'],
-    description: row.description as string | undefined,
-    details:     (row.details as string[]) ?? [],
-    sizes:       (row.sizes as string[]) ?? [],
-    isNew:       row.is_new as boolean | undefined,
-    inStock:     row.in_stock as boolean | undefined,
-    stockCount:  row.stock_count as number | undefined,
-    comingSoon:  row.coming_soon as boolean | undefined,
+    id:            row.id as number,
+    name:          row.name as string,
+    price:         discountedPrice,
+    originalPrice: discount && discount > 0 ? price : undefined,
+    discount:      discount,
+    image:         row.image as string,
+    images:        (row.images as string[]) ?? [],
+    category:      row.category as string,
+    gender:        row.gender as Product['gender'],
+    description:   row.description as string | undefined,
+    details:       (row.details as string[]) ?? [],
+    sizes:         (row.sizes as string[]) ?? [],
+    isNew:         row.is_new as boolean | undefined,
+    inStock:       row.in_stock as boolean | undefined,
+    stockCount:    row.stock_count as number | undefined,
+    comingSoon:    row.coming_soon as boolean | undefined,
   };
 }
 
@@ -38,6 +43,7 @@ function productToRow(p: Partial<Product>) {
     in_stock:    p.inStock ?? true,
     stock_count: p.stockCount ?? 0,
     coming_soon: p.comingSoon ?? false,
+    discount:    p.discount ?? 0,
   };
 }
 

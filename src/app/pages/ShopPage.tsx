@@ -4,6 +4,7 @@ import { ProductCard } from '../components/ProductCard';
 import { SlidersHorizontal, X, ChevronDown, Clock, ArrowRight } from 'lucide-react';
 import { CATEGORIES } from '../../lib/products';
 import { useProducts } from '../../lib/productsApi';
+import { useCurrency } from '../../lib/useCurrency';
 import type { ProductGender } from '../../lib/types';
 
 const GENDER_TABS: { id: ProductGender; label: string }[] = [
@@ -14,6 +15,7 @@ const GENDER_TABS: { id: ProductGender; label: string }[] = [
 
 export function ShopPage() {
   const { products } = useProducts();
+  const { format } = useCurrency();
   const [searchParams, setSearchParams] = useSearchParams();
   const [activeGender, setActiveGender] = useState<ProductGender>('men');
   const [filterOpen, setFilterOpen] = useState(false);
@@ -171,10 +173,10 @@ export function ShopPage() {
                 {priceRanges.map((range) => (
                   <button key={range} onClick={() => togglePriceRange(range)}
                     className="flex items-center gap-1.5 px-3 py-1.5 bg-[#64020e] text-white text-xs font-semibold rounded-full hover:bg-[#4a0109] transition-colors">
-                    {range === 'under-100' && 'Under $100'}
-                    {range === '100-500' && '$100–$500'}
-                    {range === '500-1000' && '$500–$1000'}
-                    {range === 'over-1000' && 'Over $1000'}
+                    {range === 'under-100' && 'Under 100 BDT'}
+                    {range === '100-500' && '100–500 BDT'}
+                    {range === '500-1000' && '500–1000 BDT'}
+                    {range === 'over-1000' && 'Over 1000 BDT'}
                     <X className="w-3 h-3" />
                   </button>
                 ))}
@@ -209,10 +211,10 @@ export function ShopPage() {
                     <h3 className="text-xs uppercase tracking-[0.2em] font-semibold text-[#7a5c60] mb-4">Price Range</h3>
                     <div className="space-y-3">
                       {[
-                        { id: 'under-100', label: 'Under $100' },
-                        { id: '100-500', label: '$100 – $500' },
-                        { id: '500-1000', label: '$500 – $1,000' },
-                        { id: 'over-1000', label: 'Over $1,000' },
+                        { id: 'under-100', label: 'Under 100 BDT' },
+                        { id: '100-500', label: '100 – 500 BDT' },
+                        { id: '500-1000', label: '500 – 1,000 BDT' },
+                        { id: 'over-1000', label: 'Over 1,000 BDT' },
                       ].map(({ id, label }) => (
                         <label key={id} className="flex items-center gap-3 cursor-pointer group">
                           <div

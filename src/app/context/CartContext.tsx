@@ -8,6 +8,7 @@ export interface CartItem {
   category: string;
   size: string;
   quantity: number;
+  maxStock?: number; // stock limit from DB
 }
 
 interface CartContextType {
@@ -45,6 +46,8 @@ export function CartProvider({ children }: { children: ReactNode }) {
         (i) => i.id === newItem.id && i.size === newItem.size
       );
       if (existing) {
+        const max = newItem.maxStock ?? existing.maxStock ?? Infinity;
+        if (existing.quantity >= max) return prev; // at stock limit
         return prev.map((i) =>
           i.id === newItem.id && i.size === newItem.size
             ? { ...i, quantity: i.quantity + 1 }
@@ -66,9 +69,13 @@ export function CartProvider({ children }: { children: ReactNode }) {
       return;
     }
     setItems((prev) =>
-      prev.map((i) =>
-        i.id === id && i.size === size ? { ...i, quantity } : i
-      )
+      prev.map((i) => {
+        if (i.id === id && i.size === size) {
+          const max = i.maxStock ?? Infinity;
+          return { ...i, quantity: Math.min(quantity, max) };
+        }
+        return i;
+      })
     );
   };
 

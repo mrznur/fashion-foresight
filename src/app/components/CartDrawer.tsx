@@ -1,11 +1,11 @@
 import { X, Trash2, ShoppingBag, Plus, Minus, ArrowRight } from 'lucide-react';
 import { useCart } from '../context/CartContext';
 import { Link } from 'react-router';
+import { useCurrency } from '../../lib/useCurrency';
 
 export function CartDrawer() {
   const { items, isCartOpen, closeCart, removeItem, updateQuantity, totalItems, totalPrice } = useCart();
-
-  const freeShippingThreshold = 200;
+  const { format, freeShippingThreshold } = useCurrency();
   const remaining = freeShippingThreshold - totalPrice;
   const progress = Math.min((totalPrice / freeShippingThreshold) * 100, 100);
 
@@ -51,7 +51,7 @@ export function CartDrawer() {
             <div className="flex items-center justify-between mb-1.5">
               <p className="text-xs text-[#737373]">
                 {remaining > 0
-                  ? <><span className="font-semibold text-[#64020e]">${remaining.toFixed(0)}</span> away from free shipping</>
+                  ? <><span className="font-semibold text-[#64020e]">{format(remaining)}</span> away from free shipping</>
                   : <span className="text-[#166534] font-semibold">✓ You qualify for free shipping!</span>
                 }
               </p>
@@ -130,14 +130,18 @@ export function CartDrawer() {
                         <span className="w-8 text-center text-sm font-medium text-[#1a0508]">{item.quantity}</span>
                         <button
                           onClick={() => updateQuantity(item.id, item.size, item.quantity + 1)}
-                          className="w-8 h-8 flex items-center justify-center text-[#737373] hover:text-[#1a0508] hover:bg-[#f5f5f5] transition-colors"
+                          disabled={item.maxStock !== undefined && item.quantity >= item.maxStock}
+                          className="w-8 h-8 flex items-center justify-center text-[#737373] hover:text-[#1a0508] hover:bg-[#f5f5f5] transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
                           aria-label="Increase"
                         >
                           <Plus className="w-3 h-3" />
                         </button>
                       </div>
-                      <p className="text-sm font-semibold text-[#1a0508]">${(item.price * item.quantity).toFixed(2)}</p>
+                      <p className="text-sm font-semibold text-[#1a0508]">{format(item.price * item.quantity)}</p>
                     </div>
+                    {item.maxStock !== undefined && item.quantity >= item.maxStock && (
+                      <p className="text-[10px] text-amber-600 mt-1">Max stock reached</p>
+                    )}
                   </div>
                 </div>
               ))}
@@ -150,7 +154,7 @@ export function CartDrawer() {
           <div className="px-6 py-5 border-t border-[#f5f5f5] space-y-3 bg-white">
             <div className="flex items-center justify-between py-1">
               <span className="text-sm text-[#737373]">Subtotal</span>
-              <span className="text-lg font-semibold text-[#1a0508]">${totalPrice.toFixed(2)}</span>
+              <span className="text-lg font-semibold text-[#1a0508]">{format(totalPrice)}</span>
             </div>
             <button className="w-full btn-brand justify-center py-3.5 text-sm font-semibold tracking-wide">
               Checkout

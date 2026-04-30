@@ -4,6 +4,7 @@ import { Link } from 'react-router';
 import { useCart } from '../context/CartContext';
 import { useWishlist } from '../context/WishlistContext';
 import { toast } from 'sonner';
+import { useCurrency } from '../../lib/useCurrency';
 
 export interface QuickViewProduct {
   id: number;
@@ -25,6 +26,7 @@ export function QuickViewModal({ product, onClose }: QuickViewModalProps) {
   const [sizeError, setSizeError] = useState(false);
   const { addItem } = useCart();
   const { toggle, isLiked } = useWishlist();
+  const { format } = useCurrency();
 
   useEffect(() => {
     if (product) {
@@ -78,7 +80,7 @@ export function QuickViewModal({ product, onClose }: QuickViewModalProps) {
               <div>
                 <p className="text-[10px] text-[#64020e] uppercase tracking-widest font-semibold mb-2">{product.category}</p>
                 <h2 className="text-xl font-semibold text-[#1a0508] mb-2 leading-snug">{product.name}</h2>
-                <p className="text-2xl font-bold text-[#1a0508]">${product.price.toFixed(2)}</p>
+                <p className="text-2xl font-bold text-[#1a0508]">{format(product.price)}</p>
               </div>
 
               {/* Size */}
