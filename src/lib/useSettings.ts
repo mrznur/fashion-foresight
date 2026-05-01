@@ -1,20 +1,18 @@
 import { useState, useEffect } from 'react';
 import { fetchSettings, type Settings } from './db';
-import { setCurrency } from './currency';
 
 const DEFAULT_SETTINGS: Settings = {
   store_name:              'Fashion Foresight',
   store_email:             'hello@fashionforesight.com',
-  support_phone:           '+1 (555) 000-0000',
-  store_address:           'Via Montenapoleone 12, Milan',
-  free_shipping_threshold: '200',
+  support_phone:           '+880 1XXX-XXXXXX',
+  store_address:           'Dhaka, Bangladesh',
+  free_shipping_threshold: '1000',
   default_currency:        'BDT',
-  return_window:           '30',
-  copyright_year:          '2026',
-  business_hours:          'Mon–Sat: 10:00–19:00 CET',
+  return_window:           '7',
+  copyright_year:          String(new Date().getFullYear()),
+  business_hours:          'Sat–Thu: 10:00 AM – 8:00 PM',
 };
 
-// Module-level cache so we only fetch once per session
 let cached: Settings | null = null;
 let promise: Promise<Settings> | null = null;
 
@@ -23,7 +21,6 @@ function loadSettings(): Promise<Settings> {
   if (promise) return promise;
   promise = fetchSettings().then((data) => {
     cached = { ...DEFAULT_SETTINGS, ...data };
-    if (cached.default_currency) setCurrency(cached.default_currency);
     return cached;
   });
   return promise;
@@ -31,17 +28,6 @@ function loadSettings(): Promise<Settings> {
 
 export function useSettings() {
   const [settings, setSettings] = useState<Settings>(cached ?? DEFAULT_SETTINGS);
-
-  useEffect(() => {
-    loadSettings().then(setSettings);
-  }, []);
-
+  useEffect(() => { loadSettings().then(setSettings); }, []);
   return settings;
-}
-
-// ─── Currency formatter ───────────────────────────────────────────────────────
-// Reads currency from settings, defaults to BDT
-export function formatPrice(amount: number, currency?: string): string {
-  const cur = currency ?? 'BDT';
-  return `${amount.toLocaleString('en-BD', { minimumFractionDigits: 0, maximumFractionDigits: 0 })} ${cur}`;
 }

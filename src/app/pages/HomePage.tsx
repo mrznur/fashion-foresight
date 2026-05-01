@@ -4,7 +4,7 @@ import { Link } from 'react-router';
 import { ProductCard } from '../components/ProductCard';
 import { toast } from 'sonner';
 import { useProducts } from '../../lib/productsApi';
-import { subscribeNewsletter, fetchSettings } from '../../lib/db';
+import { subscribeNewsletter, fetchCarouselSlides, type CarouselSlide } from '../../lib/db';
 import { useSettings } from '../../lib/useSettings';
 
 const features = [
@@ -20,20 +20,33 @@ export function HomePage() {
 
   const [newsletterEmail, setNewsletterEmail] = useState('');
   const [current, setCurrent] = useState(0);
-
-  // Hero slides built from first 6 products that have images
-  const heroProducts = products.filter(p => p.image).slice(0, 6);
-
-  const prev = useCallback(() =>
-    setCurrent(c => (c - 1 + Math.max(heroProducts.length, 1)) % Math.max(heroProducts.length, 1)), [heroProducts.length]);
-  const next = useCallback(() =>
-    setCurrent(c => (c + 1) % Math.max(heroProducts.length, 1)), [heroProducts.length]);
+  const [slides, setSlides] = useState<CarouselSlide[]>([]);
 
   useEffect(() => {
-    if (heroProducts.length < 2) return;
+    fetchCarouselSlides().then(setSlides);
+  }, []);
+
+  // Use DB carousel slides if available, else fallback to product images
+  const heroItems = slides.length > 0
+    ? slides.map(sl => ({ image: sl.image_url, label: sl.label ?? '', productId: sl.product_id }))
+    : products.filter(p => p.image).slice(0, 6).map(p => ({
+        image: p.featuredImage ?? p.image,
+        label: p.category,
+        productId: p.id,
+      }));
+
+  const slide = heroItems[current];
+
+  const prev = useCallback(() =>
+    setCurrent(c => (c - 1 + Math.max(heroItems.length, 1)) % Math.max(heroItems.length, 1)), [heroItems.length]);
+  const next = useCallback(() =>
+    setCurrent(c => (c + 1) % Math.max(heroItems.length, 1)), [heroItems.length]);
+
+  useEffect(() => {
+    if (heroItems.length < 2) return;
     const timer = setInterval(next, 5000);
     return () => clearInterval(timer);
-  }, [next, heroProducts.length]);
+  }, [next, heroItems.length]);
 
   const handleNewsletter = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -43,18 +56,16 @@ export function HomePage() {
     setNewsletterEmail('');
   };
 
-  const slide = heroProducts[current];
-
   return (
     <div className="min-h-screen bg-white">
 
       {/* ── Hero Carousel ─────────────────────────────────────────────── */}
       <section className="relative h-[92vh] min-h-[600px] flex items-center justify-center overflow-hidden bg-[#1a0508]">
-        {heroProducts.length > 0 ? (
+        {heroItems.length > 0 ? (
           <>
-            {heroProducts.map((p, i) => (
-              <div key={p.id} className={`absolute inset-0 transition-opacity duration-1000 ${i === current ? 'opacity-100' : 'opacity-0'}`}>
-                <img src={p.image} alt={p.name} className="w-full h-full object-cover" />
+            {heroItems.map((item, i) => (
+              <div key={i} className={`absolute inset-0 transition-opacity duration-1000 ${i === current ? 'opacity-100' : 'opacity-0'}`}>
+                <img src={item.image} alt={item.label} className="w-full h-full object-cover" />
               </div>
             ))}
             <div className="absolute inset-0 bg-gradient-to-r from-black/70 via-black/40 to-black/20 z-10" />
@@ -62,28 +73,33 @@ export function HomePage() {
 
             <div className="relative z-20 text-white px-4 max-w-6xl mx-auto w-full">
               <div className="max-w-2xl">
-                <div className="inline-flex items-center gap-2 bg-white/10 backdrop-blur-sm border border-white/20 rounded-full px-4 py-1.5 mb-6">
-                  <Sparkles className="w-3.5 h-3.5 text-[#d4a0a0]" />
-                  <span className="text-xs tracking-[0.2em] uppercase text-white/80">{slide?.category}</span>
-                </div>
-                <h1 className="text-5xl sm:text-6xl md:text-7xl font-light tracking-tight mb-6 leading-[1.05]">
-                  {slide?.name}
+                <p className="text-sm md:text-base uppercase tracking-[0.3em] text-white/60 font-medium mb-4">
+                  {slide?.label}
+                </p>
+                <h1 className="font-display text-5xl sm:text-6xl md:text-7xl font-semibold tracking-tight mb-5 leading-[1.05]">
+                  {s.store_name}
                 </h1>
-                <p className="text-base md:text-lg text-white/70 mb-10 leading-relaxed max-w-lg">
-                  {slide?.description ?? 'Premium menswear crafted for the discerning gentleman.'}
+                <p className="text-base md:text-lg text-white/65 mb-10 leading-relaxed max-w-lg font-light">
+                  Premium menswear crafted for the discerning gentleman.
                 </p>
                 <div className="flex flex-wrap gap-3">
-                  <Link to="/shop" className="btn-brand text-sm px-7 py-3.5 bg-[#64020e] hover:bg-[#4a0109]">
-                    Shop Now <ArrowRight className="w-4 h-4" />
-                  </Link>
-                  <Link to="/collections" className="inline-flex items-center gap-2 border-2 border-white/40 text-white px-7 py-3.5 rounded-xl text-sm font-medium hover:bg-white/10 hover:border-white/70 transition-all duration-200">
-                    View Collections
+                  {slide?.productId ? (
+                    <Link to={`/product/${slide.productId}`} className="btn-brand text-sm px-7 py-3.5 bg-[#64020e] hover:bg-[#4a0109]">
+                      Shop Now <ArrowRight className="w-4 h-4" />
+                    </Link>
+                  ) : (
+                    <Link to="/shop" className="btn-brand text-sm px-7 py-3.5 bg-[#64020e] hover:bg-[#4a0109]">
+                      Shop Now <ArrowRight className="w-4 h-4" />
+                    </Link>
+                  )}
+                  <Link to="/shop" className="inline-flex items-center gap-2 border-2 border-white/40 text-white px-7 py-3.5 rounded-xl text-sm font-medium hover:bg-white/10 hover:border-white/70 transition-all duration-200">
+                    View All
                   </Link>
                 </div>
               </div>
             </div>
 
-            {heroProducts.length > 1 && (
+            {heroItems.length > 1 && (
               <>
                 <button onClick={prev} aria-label="Previous" className="absolute left-4 md:left-8 top-1/2 -translate-y-1/2 z-20 w-11 h-11 flex items-center justify-center rounded-full bg-white/10 border border-white/20 text-white hover:bg-white/25 transition-all">
                   <ChevronLeft className="w-5 h-5" />
@@ -92,7 +108,7 @@ export function HomePage() {
                   <ChevronRight className="w-5 h-5" />
                 </button>
                 <div className="absolute bottom-8 left-1/2 -translate-x-1/2 z-20 flex items-center gap-2">
-                  {heroProducts.map((_, i) => (
+                  {heroItems.map((_, i) => (
                     <button key={i} onClick={() => setCurrent(i)} aria-label={`Slide ${i + 1}`}
                       className={`rounded-full transition-all duration-300 ${i === current ? 'w-6 h-2 bg-white' : 'w-2 h-2 bg-white/40 hover:bg-white/70'}`}
                     />

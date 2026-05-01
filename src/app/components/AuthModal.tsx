@@ -4,6 +4,7 @@ import { toast } from 'sonner';
 import { useAuth } from '../context/AuthContext';
 import { loginSchema, signUpSchema } from '../../lib/validation';
 import { auth } from '../../lib/auth';
+import { useSettings } from '../../lib/useSettings';
 import type { ZodError } from 'zod';
 
 interface AuthModalProps {
@@ -32,6 +33,7 @@ function getZodErrors(error: ZodError): FieldErrors {
 
 export function AuthModal({ isOpen, onClose }: AuthModalProps) {
   const { signIn, signUp } = useAuth();
+  const s = useSettings();
   const [mode, setMode] = useState<Mode>('signin');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
@@ -87,7 +89,7 @@ export function AuthModal({ isOpen, onClose }: AuthModalProps) {
         if (!parsed.success) { setFieldErrors(getZodErrors(parsed.error)); return; }
         const result = await signUp(parsed.data);
         if (result.error) { setFieldErrors({ general: result.error }); return; }
-        toast.success(`Welcome to Fashion Foresight, ${result.data?.name}!`);
+        toast.success(`Welcome, ${result.data?.name}!`);
         handleClose();
       }
     } catch {
@@ -133,7 +135,7 @@ export function AuthModal({ isOpen, onClose }: AuthModalProps) {
                 {mode === 'signin' ? 'Welcome Back' : 'Create Account'}
               </h2>
               <p className="text-sm text-[#737373] mt-0.5">
-                {mode === 'signin' ? 'Sign in to your Fashion Foresight account' : 'Join the Fashion Foresight community'}
+                {mode === 'signin' ? `Sign in to your ${s.store_name} account` : `Join ${s.store_name}`}
               </p>
             </div>
             <button onClick={handleClose} className="w-8 h-8 flex items-center justify-center rounded-xl text-[#737373] hover:text-[#1a0508] hover:bg-[#f5f5f5] transition-all" aria-label="Close">
@@ -159,17 +161,6 @@ export function AuthModal({ isOpen, onClose }: AuthModalProps) {
                 </button>
               ))}
             </div>
-
-            {/* Demo credentials */}
-            {mode === 'signin' && !auth.isConfigured && (
-              <div className="mb-5 p-4 bg-[#fdf2f2] border border-[#f5e5e5] rounded-2xl text-xs">
-                <p className="font-semibold text-[#64020e] mb-2">Demo Credentials</p>
-                <div className="space-y-1 text-[#737373]">
-                  <p><span className="font-medium text-[#1a0508]">Admin:</span> {auth.demoAdminEmail} / {auth.demoAdminPassword}</p>
-                  <p><span className="font-medium text-[#1a0508]">User:</span> Register a new account below</p>
-                </div>
-              </div>
-            )}
 
             {/* General error */}
             {fieldErrors.general && (

@@ -97,13 +97,13 @@ export function ContactPage() {
                       First Name <span className="text-[#64020e]">*</span>
                     </label>
                     <input type="text" id="firstName" value={formData.firstName} onChange={handleChange}
-                      className={inputClass(Boolean(fieldErrors.firstName))} placeholder="John" />
+                      className={inputClass(Boolean(fieldErrors.firstName))} placeholder="Your first name" />
                     {fieldErrors.firstName && <p className="mt-1.5 text-xs text-[#64020e] font-medium">{fieldErrors.firstName}</p>}
                   </div>
                   <div>
                     <label htmlFor="lastName" className="block mb-1.5 text-sm font-medium text-[#1a0508]">Last Name</label>
                     <input type="text" id="lastName" value={formData.lastName} onChange={handleChange}
-                      className={inputClass(false)} placeholder="Doe" />
+                      className={inputClass(false)} placeholder="Your last name" />
                   </div>
                 </div>
 
@@ -112,7 +112,7 @@ export function ContactPage() {
                     Email Address <span className="text-[#64020e]">*</span>
                   </label>
                   <input type="email" id="email" value={formData.email} onChange={handleChange}
-                    className={inputClass(Boolean(fieldErrors.email))} placeholder="john@example.com" />
+                    className={inputClass(Boolean(fieldErrors.email))} placeholder="Your email address" />
                   {fieldErrors.email && <p className="mt-1.5 text-xs text-[#64020e] font-medium">{fieldErrors.email}</p>}
                 </div>
 
@@ -121,7 +121,7 @@ export function ContactPage() {
                     Phone <span className="text-[#737373] font-normal text-xs">(Optional)</span>
                   </label>
                   <input type="tel" id="phone" value={formData.phone} onChange={handleChange}
-                    className={inputClass(false)} placeholder="+1 (555) 000-0000" />
+                    className={inputClass(false)} placeholder="Your phone number" />
                 </div>
 
                 <div>
@@ -142,7 +142,7 @@ export function ContactPage() {
                   </label>
                   <textarea id="message" rows={5} value={formData.message} onChange={handleChange}
                     className={`${inputClass(Boolean(fieldErrors.message))} resize-none`}
-                    placeholder="Tell us how we can help..." />
+                    placeholder="Your message..." />
                   {fieldErrors.message && <p className="mt-1.5 text-xs text-[#64020e] font-medium">{fieldErrors.message}</p>}
                 </div>
 
@@ -187,15 +187,17 @@ export function ContactPage() {
               </div>
               <div className="space-y-2.5">
                 {[
-                  { day: 'Monday – Friday', hours: '10:00 – 19:00' },
-                  { day: 'Saturday', hours: '10:00 – 18:00' },
-                  { day: 'Sunday', hours: 'Closed' },
+                  { day: 'Saturday – Thursday', hours: '10:00 AM – 8:00 PM' },
+                  { day: 'Friday', hours: 'Closed' },
                 ].map(({ day, hours }) => (
                   <div key={day} className="flex justify-between text-sm">
                     <span className="text-[#737373]">{day}</span>
                     <span className={`font-medium ${hours === 'Closed' ? 'text-[#64020e]' : 'text-[#1a0508]'}`}>{hours}</span>
                   </div>
                 ))}
+                {s.business_hours && (
+                  <p className="text-xs text-[#7a5c60] pt-1">{s.business_hours}</p>
+                )}
               </div>
             </div>
 

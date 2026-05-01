@@ -25,6 +25,7 @@ function rowToProduct(row: Record<string, unknown>): Product {
     inStock:       row.in_stock as boolean | undefined,
     stockCount:    row.stock_count as number | undefined,
     comingSoon:    row.coming_soon as boolean | undefined,
+    featuredImage: row.featured_image as string | undefined,
   };
 }
 
@@ -42,8 +43,9 @@ function productToRow(p: Partial<Product>) {
     is_new:      p.isNew ?? false,
     in_stock:    p.inStock ?? true,
     stock_count: p.stockCount ?? 0,
-    coming_soon: p.comingSoon ?? false,
-    discount:    p.discount ?? 0,
+    coming_soon:    p.comingSoon ?? false,
+    discount:       p.discount ?? 0,
+    featured_image: p.featuredImage ?? null,
   };
 }
 
@@ -62,7 +64,8 @@ export async function fetchProducts(): Promise<Product[]> {
     return STATIC_PRODUCTS;
   }
 
-  return (data ?? []).map(rowToProduct);
+  const mapped = (data ?? []).map(rowToProduct);
+  return mapped;
 }
 
 export async function fetchProductById(id: number): Promise<Product | null> {
@@ -95,14 +98,19 @@ export async function createProduct(product: Omit<Product, 'id'>): Promise<ApiRe
 export async function updateProduct(id: number, updates: Partial<Product>): Promise<ApiResult<Product>> {
   if (!isSupabaseConfigured) return { data: null, error: 'Supabase not configured' };
 
+  const row = productToRow(updates);
+
   const { data, error } = await supabase
     .from('products')
-    .update(productToRow(updates))
+    .update(row)
     .eq('id', id)
     .select()
     .single();
 
-  if (error) return { data: null, error: error.message };
+  if (error) {
+    console.error('[db] updateProduct error:', error.message);
+    return { data: null, error: error.message };
+  }
   return { data: rowToProduct(data), error: null };
 }
 
@@ -133,7 +141,7 @@ export async function fetchAllOrders(): Promise<DbOrder[]> {
 
   const { data, error } = await supabase
     .from('orders')
-    .select('id, user_id, items, total, status, created_at')
+    .select('id, user_id, items, total, status, created_at, guest_name, guest_phone')
     .order('created_at', { ascending: false });
 
   if (error) {
@@ -148,8 +156,10 @@ export async function fetchAllOrders(): Promise<DbOrder[]> {
     total:          Number(row.total),
     status:         row.status as Order['status'],
     created_at:     row.created_at as string,
-    customer_name:  'Guest',
+    customer_name:  (row.guest_name as string) ?? 'Guest',
     customer_email: '',
+    guest_name:     row.guest_name as string | null,
+    guest_phone:    row.guest_phone as string | null,
   }));
 }
 
@@ -178,16 +188,25 @@ export async function fetchUserOrders(userId: string): Promise<DbOrder[]> {
 }
 
 export async function createOrder(
-  userId: string,
+  userId: string | null,
   items: CartItem[],
   total: number,
+  guestInfo?: { name: string; phone: string },
   shippingAddress?: Record<string, string>
 ): Promise<ApiResult<DbOrder>> {
   if (!isSupabaseConfigured) return { data: null, error: 'Supabase not configured' };
 
   const { data, error } = await supabase
     .from('orders')
-    .insert({ user_id: userId, items, total, status: 'pending', shipping_address: shippingAddress ?? null })
+    .insert({
+      user_id:          userId ?? null,
+      items,
+      total,
+      status:           'pending',
+      shipping_address: shippingAddress ?? null,
+      guest_name:       guestInfo?.name ?? null,
+      guest_phone:      guestInfo?.phone ?? null,
+    })
     .select()
     .single();
 
@@ -200,7 +219,7 @@ export async function createOrder(
       total:          Number(data.total),
       status:         data.status,
       created_at:     data.created_at,
-      customer_name:  '',
+      customer_name:  data.guest_name ?? '',
       customer_email: '',
     },
     error: null,
@@ -324,5 +343,62 @@ export async function saveSettings(settings: Settings): Promise<ApiResult<null>>
     console.error('[db] saveSettings:', error.message);
     return { data: null, error: error.message };
   }
+  return { data: null, error: null };
+}
+
+// ─── Carousel ─────────────────────────────────────────────────────────────────
+
+export interface CarouselSlide {
+  id: number;
+  image_url: string;
+  product_id: number | null;
+  label: string | null;
+  sort_order: number;
+  active: boolean;
+}
+
+export async function fetchCarouselSlides(): Promise<CarouselSlide[]> {
+  if (!isSupabaseConfigured) return [];
+
+  const { data, error } = await supabase
+    .from('carousel_slides')
+    .select('*')
+    .eq('active', true)
+    .order('sort_order');
+
+  if (error) { console.warn('[db] fetchCarouselSlides:', error.message); return []; }
+  return (data ?? []) as CarouselSlide[];
+}
+
+export async function fetchAllCarouselSlides(): Promise<CarouselSlide[]> {
+  if (!isSupabaseConfigured) return [];
+
+  const { data, error } = await supabase
+    .from('carousel_slides')
+    .select('*')
+    .order('sort_order');
+
+  if (error) { console.warn('[db] fetchAllCarouselSlides:', error.message); return []; }
+  return (data ?? []) as CarouselSlide[];
+}
+
+export async function upsertCarouselSlide(slide: Partial<CarouselSlide> & { image_url: string }): Promise<ApiResult<CarouselSlide>> {
+  if (!isSupabaseConfigured) return { data: null, error: 'Supabase not configured' };
+
+  const { data, error } = await supabase
+    .from('carousel_slides')
+    .upsert(slide, { onConflict: 'id' })
+    .select()
+    .single();
+
+  if (error) return { data: null, error: error.message };
+  return { data: data as CarouselSlide, error: null };
+}
+
+export async function deleteCarouselSlide(id: number): Promise<ApiResult<null>> {
+  if (!isSupabaseConfigured) return { data: null, error: 'Supabase not configured' };
+
+  const { error } = await supabase.from('carousel_slides').delete().eq('id', id);
+  if (error) return { data: null, error: error.message };
   return { data: null, error: null };
 }

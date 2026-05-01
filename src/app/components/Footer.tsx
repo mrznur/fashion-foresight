@@ -79,7 +79,7 @@ export function Footer() {
                 { to: '#', label: 'Shipping & Returns' },
                 { to: '#', label: 'Size Guide' },
                 { to: '#', label: 'FAQ' },
-                { to: '#', label: 'Track Order' },
+                { to: '/track-order', label: 'Track Order' },
               ].map(({ to, label }) => (
                 <li key={label}>
                   <Link to={to} className="text-lg text-white/60 hover:text-white transition-colors duration-200">

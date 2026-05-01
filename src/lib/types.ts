@@ -20,6 +20,7 @@ export interface Product {
   discount?: number;
   image: string;
   images?: string[];
+  featuredImage?: string;
   category: string;
   gender: ProductGender;
   description?: string;

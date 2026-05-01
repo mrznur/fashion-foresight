@@ -6,7 +6,7 @@ import {
   ChevronDown, X, Save, BarChart2, RefreshCw, Upload,
 } from 'lucide-react';
 import { CATEGORIES } from '../../lib/products';
-import { fetchProducts, fetchAllOrders, createProduct, updateProduct, deleteProduct, updateOrderStatus, fetchSettings, saveSettings } from '../../lib/db';
+import { fetchProducts, fetchAllOrders, createProduct, updateProduct, deleteProduct, updateOrderStatus, fetchSettings, saveSettings, fetchAllCarouselSlides, upsertCarouselSlide, deleteCarouselSlide, type CarouselSlide } from '../../lib/db';
 import { supabase } from '../../lib/supabase';
 import { useCurrency } from '../../lib/useCurrency';
 import type { Product } from '../../lib/types';
@@ -14,7 +14,7 @@ import type { DbOrder } from '../../lib/db';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
-type AdminTab = 'overview' | 'orders' | 'products' | 'customers' | 'settings';
+type AdminTab = 'overview' | 'orders' | 'products' | 'carousel' | 'customers' | 'settings';
 
 interface AdminProduct extends Product {
   discount?: number;
@@ -35,18 +35,18 @@ function StatCard({ label, value, icon: Icon, change, positive }: {
   label: string; value: string; icon: React.ElementType; change: string; positive: boolean;
 }) {
   return (
-    <div className="bg-white rounded-2xl border border-[#e8dede] p-7 hover:shadow-md transition-all duration-200"> {}
-      <div className="flex items-start justify-between mb-5"> {}
-        <div className="w-12 h-12 bg-[#fdf2f2] rounded-xl flex items-center justify-center"> {}
-          <Icon className="w-6 h-6 text-[#64020e]" /> {}
+    <div className="bg-white rounded-2xl border border-[#e8dede] p-7 hover:shadow-md transition-all duration-200">
+      <div className="flex items-start justify-between mb-5">
+        <div className="w-12 h-12 bg-[#fdf2f2] rounded-xl flex items-center justify-center">
+          <Icon className="w-6 h-6 text-[#64020e]" />
         </div>
-        <span className={`text-base font-semibold flex items-center gap-1 ${positive ? 'text-emerald-600' : 'text-red-500'}`}> {}
+        <span className={`text-base font-semibold flex items-center gap-1 ${positive ? 'text-emerald-600' : 'text-red-500'}`}>
           <TrendingUp className="w-4 h-4" />
           {change}
         </span>
       </div>
-      <p className="text-4xl font-bold text-[#1a0508] mb-2 font-display">{value}</p> {}
-      <p className="text-base text-[#7a5c60] font-medium">{label}</p> {}
+      <p className="text-4xl font-bold text-[#1a0508] mb-2 font-display">{value}</p>
+      <p className="text-base text-[#7a5c60] font-medium">{label}</p>
     </div>
   );
 }
@@ -55,8 +55,8 @@ function StatusBadge({ status }: { status: DbOrder['status'] }) {
   const cfg = STATUS_CONFIG[status];
   const Icon = cfg.icon;
   return (
-    <span className={`inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-semibold rounded-full ${cfg.bg} ${cfg.text}`}> {}
-      <Icon className="w-3.5 h-3.5" /> {}
+    <span className={`inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-semibold rounded-full ${cfg.bg} ${cfg.text}`}>
+      <Icon className="w-3.5 h-3.5" />
       {cfg.label}
     </span>
   );
@@ -86,17 +86,17 @@ function OverviewTab() {
 
   return (
     <div className="space-y-8">
-      {}
+     
       <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-5">
         {stats.map((s) => <StatCard key={s.label} {...s} />)}
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {}
+       
         <div className="lg:col-span-2 bg-white rounded-2xl border border-[#e8dede] overflow-hidden">
-          <div className="px-7 py-5 border-b border-[#f5f0ef] flex items-center justify-between"> {}
-            <h3 className="text-xl font-semibold text-[#1a0508] font-display">Recent Orders</h3> {}
-            <button className="text-base text-[#64020e] font-semibold flex items-center gap-1 hover:gap-2 transition-all"> {}
+          <div className="px-7 py-5 border-b border-[#f5f0ef] flex items-center justify-between">
+            <h3 className="text-xl font-semibold text-[#1a0508] font-display">Recent Orders</h3>
+            <button className="text-base text-[#64020e] font-semibold flex items-center gap-1 hover:gap-2 transition-all">
               View all <ArrowUpRight className="w-4 h-4" />
             </button>
           </div>
@@ -122,26 +122,26 @@ function OverviewTab() {
           </div>
         </div>
 
-        {}
+       
         <div className="bg-white rounded-2xl border border-[#e8dede] overflow-hidden">
-          <div className="px-7 py-5 border-b border-[#f5f0ef] flex items-center gap-2"> {}
-            <AlertTriangle className="w-5 h-5 text-amber-500" /> {}
-            <h3 className="text-xl font-semibold text-[#1a0508] font-display">Low Stock</h3> {}
-            <span className="ml-auto bg-amber-100 text-amber-700 text-sm font-bold px-3 py-1 rounded-full"> {}
+          <div className="px-7 py-5 border-b border-[#f5f0ef] flex items-center gap-2">
+            <AlertTriangle className="w-5 h-5 text-amber-500" />
+            <h3 className="text-xl font-semibold text-[#1a0508] font-display">Low Stock</h3>
+            <span className="ml-auto bg-amber-100 text-amber-700 text-sm font-bold px-3 py-1 rounded-full">
               {lowStock.length}
             </span>
           </div>
           <div className="divide-y divide-[#f5f0ef]">
             {lowStock.map((p) => (
-              <div key={p.id} className="px-7 py-4 flex items-center gap-3 hover:bg-[#faf9f8] transition-colors"> {}
-                <img src={p.image} alt={p.name} className="w-12 h-14 object-cover rounded-lg flex-shrink-0" /> {}
+              <div key={p.id} className="px-7 py-4 flex items-center gap-3 hover:bg-[#faf9f8] transition-colors">
+                <img src={p.image} alt={p.name} className="w-12 h-14 object-cover rounded-lg flex-shrink-0" />
                 <div className="flex-1 min-w-0">
-                  <p className="text-base font-medium text-[#1a0508] truncate">{p.name}</p> {}
-                  <p className="text-sm text-[#7a5c60]">{p.category}</p> {}
+                  <p className="text-base font-medium text-[#1a0508] truncate">{p.name}</p>
+                  <p className="text-sm text-[#7a5c60]">{p.category}</p>
                 </div>
                 <span className={`text-sm font-bold px-3 py-1.5 rounded-lg flex-shrink-0 ${
                   (p.stockCount ?? 0) <= 3 ? 'bg-red-100 text-red-700' : 'bg-amber-100 text-amber-700'
-                }`}> {}
+                }`}>
                   {p.stockCount} left
                 </span>
               </div>
@@ -273,24 +273,23 @@ function OrdersTab() {
         <>
           <div className="fixed inset-0 bg-black/50 z-50 backdrop-blur-sm" onClick={() => setSelectedOrder(null)} />
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-            <div className="bg-white rounded-3xl shadow-2xl w-full max-w-lg overflow-hidden">
-              <div className="flex items-center justify-between px-7 py-5 border-b border-[#f5f0ef]">
+            <div className="bg-white rounded-3xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto">
+              <div className="flex items-center justify-between px-7 py-5 border-b border-[#f5f0ef] sticky top-0 bg-white z-10">
                 <div>
                   <p className="text-overline">Order Details</p>
-                  <h3 className="text-xl font-semibold text-[#1a0508] mt-0.5">#{selectedOrder.id}</h3>
+                  <h3 className="text-xl font-semibold text-[#1a0508] mt-0.5">#{selectedOrder.id.slice(0, 8).toUpperCase()}</h3>
                 </div>
-                <button
-                  onClick={() => setSelectedOrder(null)}
-                  className="w-8 h-8 flex items-center justify-center rounded-xl text-[#7a5c60] hover:bg-[#fdf2f2] hover:text-[#64020e] transition-all"
-                >
+                <button onClick={() => setSelectedOrder(null)} className="w-8 h-8 flex items-center justify-center rounded-xl text-[#7a5c60] hover:bg-[#fdf2f2] hover:text-[#64020e] transition-all">
                   <X className="w-4 h-4" />
                 </button>
               </div>
-              <div className="px-7 py-6 space-y-5">
+              <div className="px-7 py-6 space-y-6">
+
+                {/* Summary */}
                 <div className="grid grid-cols-2 gap-4">
                   {[
-                    { label: 'Customer', value: selectedOrder.customer_name ?? 'Guest' },
-                    { label: 'Items', value: String(selectedOrder.items.length) },
+                    { label: 'Customer', value: (selectedOrder as DbOrder & { guest_name?: string }).guest_name ?? selectedOrder.customer_name ?? 'Guest' },
+                    { label: 'Phone', value: (selectedOrder as DbOrder & { guest_phone?: string }).guest_phone ?? '—' },
                     { label: 'Total', value: format(selectedOrder.total) },
                     { label: 'Date', value: new Date(selectedOrder.created_at).toLocaleDateString() },
                   ].map(({ label, value }) => (
@@ -300,19 +299,35 @@ function OrdersTab() {
                     </div>
                   ))}
                 </div>
+
+                {/* Items */}
+                <div>
+                  <p className="text-xs text-[#7a5c60] font-semibold uppercase tracking-wider mb-3">Items Ordered</p>
+                  <div className="space-y-3">
+                    {(selectedOrder.items ?? []).map((item, i) => (
+                      <div key={i} className="flex items-center gap-3 p-3 bg-[#faf9f8] rounded-xl">
+                        <img src={item.image} alt={item.name} className="w-12 h-14 object-cover rounded-lg flex-shrink-0 bg-[#f5f5f5]" />
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-semibold text-[#1a0508] truncate">{item.name}</p>
+                          <p className="text-xs text-[#7a5c60]">Size: {item.size} · Qty: {item.quantity}</p>
+                        </div>
+                        <p className="text-sm font-bold text-[#1a0508] flex-shrink-0">{format(item.price * item.quantity)}</p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Status update */}
                 <div>
                   <p className="text-xs text-[#7a5c60] font-semibold uppercase tracking-wider mb-2">Update Status</p>
                   <div className="flex flex-wrap gap-2">
                     {(Object.keys(STATUS_CONFIG) as DbOrder['status'][]).map((s) => (
-                      <button
-                        key={s}
-                        onClick={() => setPendingStatus(s)}
+                      <button key={s} onClick={() => setPendingStatus(s)}
                         className={`px-3 py-1.5 rounded-xl text-sm font-semibold border-2 transition-all ${
                           pendingStatus === s
                             ? 'border-[#64020e] bg-[#64020e] text-white'
                             : 'border-[#e8dede] text-[#7a5c60] hover:border-[#64020e] hover:text-[#64020e]'
-                        }`}
-                      >
+                        }`}>
                         {STATUS_CONFIG[s].label}
                       </button>
                     ))}
@@ -374,7 +389,7 @@ function ProductsTab() {
 
   return (
     <div className="space-y-5">
-      {}
+     
       <div className="flex flex-col sm:flex-row gap-3">
         <div className="relative flex-1">
           <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-[#7a5c60]" />
@@ -406,7 +421,7 @@ function ProductsTab() {
         </button>
       </div>
 
-      {}
+     
       <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-5">
         {filtered.map((product) => (
           <div key={product.id} className="bg-white rounded-2xl border border-[#e8dede] overflow-hidden hover:shadow-md transition-all duration-200 group">
@@ -443,9 +458,9 @@ function ProductsTab() {
                   {(product.discount ?? 0) > 0 ? (
                     <div className="flex items-center gap-2">
                       <span className="text-lg font-bold text-[#64020e]">
-                        {format(Math.round(product.price * (1 - (product.discount ?? 0) / 100)))}
+                        {format(product.price)}
                       </span>
-                      <span className="text-sm text-[#7a5c60] line-through">{format(product.price)}</span>
+                      <span className="text-sm text-[#7a5c60] line-through">{product.originalPrice ? format(product.originalPrice) : ''}</span>
                     </div>
                   ) : (
                     <span className="text-lg font-bold text-[#1a0508]">{format(product.price)}</span>
@@ -466,7 +481,7 @@ function ProductsTab() {
         ))}
       </div>
 
-      {}
+     
       {editingProduct && (
         <ProductModal
           product={editingProduct}
@@ -476,7 +491,7 @@ function ProductsTab() {
         />
       )}
 
-      {}
+     
       {showAddModal && (
         <ProductModal
           product={{
@@ -495,7 +510,7 @@ function ProductsTab() {
           }}
           onSave={async (p) => {
             const { data } = await createProduct(p);
-            if (data) setProducts((prev) => [...prev, { ...data, discount: 0 }]);
+            if (data) setProducts((prev) => [...prev, { ...data, discount: data.discount ?? 0 }]);
             setShowAddModal(false);
           }}
           onClose={() => setShowAddModal(false)}
@@ -514,7 +529,11 @@ function ProductModal({ product, onSave, onClose, title }: {
   onClose: () => void;
   title: string;
 }) {
-  const [form, setForm] = useState<AdminProduct>({ ...product });
+  // Use originalPrice as the editable price (before discount)
+  const [form, setForm] = useState<AdminProduct>({
+    ...product,
+    price: product.originalPrice ?? product.price,
+  });
   const [uploading, setUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { format } = useCurrency();
@@ -665,6 +684,39 @@ function ProductModal({ product, onSave, onClose, title }: {
               <p className="text-xs text-[#7a5c60] mt-2">First image is the main display image. Max 5MB per photo.</p>
             </div>
 
+            {/* Featured image for carousel */}
+            {(form.images ?? []).filter(Boolean).length > 0 && (
+              <div>
+                <label htmlFor="product-featured-image" className="block text-sm font-semibold text-[#1a0508] mb-2">
+                  Landing Page Carousel Image
+                  <span className="ml-2 text-xs font-normal text-[#7a5c60]">shown on homepage hero</span>
+                </label>
+                <div className="flex gap-2 flex-wrap">
+                  <button
+                    type="button"
+                    onClick={() => set('featuredImage', null)}
+                    className={`w-12 h-14 rounded-lg border-2 flex items-center justify-center text-xs transition-all ${
+                      !form.featuredImage ? 'border-[#64020e] bg-[#fdf2f2] text-[#64020e]' : 'border-[#e8dede] text-[#7a5c60]'
+                    }`}
+                  >
+                    None
+                  </button>
+                  {(form.images ?? []).filter(Boolean).map((img, i) => (
+                    <button
+                      key={i}
+                      type="button"
+                      onClick={() => set('featuredImage', img)}
+                      className={`w-12 h-14 rounded-lg overflow-hidden border-2 transition-all flex-shrink-0 ${
+                        form.featuredImage === img ? 'border-[#64020e] shadow-md' : 'border-[#e8dede] hover:border-[#64020e]'
+                      }`}
+                    >
+                      <img src={img} alt={`Option ${i + 1}`} className="w-full h-full object-cover" />
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
                 <label htmlFor="product-name" className="block text-sm font-semibold text-[#1a0508] mb-2">Product Name</label>
@@ -696,7 +748,7 @@ function ProductModal({ product, onSave, onClose, title }: {
               </div>
               <div>
                 <label htmlFor="product-discount" className="block text-sm font-semibold text-[#1a0508] mb-2">Discount (%)</label>
-                <input id="product-discount" name="product-discount" type="number" min={0} max={90} value={form.discount ?? 0} onChange={(e) => set('discount', Number(e.target.value))} className={inputCls} placeholder="0" />
+                <input id="product-discount" name="product-discount" type="number" min={0} max={90} step={0.1} value={form.discount ?? 0} onChange={(e) => set('discount', Number(e.target.value))} className={inputCls} placeholder="0" />
               </div>
               <div>
                 <label htmlFor="product-stock" className="block text-sm font-semibold text-[#1a0508] mb-2">Stock Count</label>
@@ -749,15 +801,15 @@ function ProductModal({ product, onSave, onClose, title }: {
               />
             </div>
 
-            {}
+           
             {(form.discount ?? 0) > 0 && form.price > 0 && (
               <div className="bg-[#fdf2f2] border border-[#e8dede] rounded-xl p-4 flex items-center gap-3">
                 <Tag className="w-5 h-5 text-[#64020e] flex-shrink-0" />
                 <div>
                   <p className="text-sm font-semibold text-[#1a0508]">Discount Preview</p>
                   <p className="text-sm text-[#7a5c60]">
-                    ${form.price} → <span className="font-bold text-[#64020e]">${(form.price * (1 - (form.discount ?? 0) / 100)).toFixed(2)}</span>
-                    {' '}(saving ${(form.price * (form.discount ?? 0) / 100).toFixed(2)})
+                    {format(form.price)} → <span className="font-bold text-[#64020e]">{format(Math.round(form.price * (1 - (form.discount ?? 0) / 100)))}</span>
+                    {' '}(saving {format(Math.round(form.price * (form.discount ?? 0) / 100))})
                   </p>
                 </div>
               </div>
@@ -904,9 +956,9 @@ function SettingsTab() {
     {
       title: 'Shipping & Orders',
       fields: [
-        { label: 'Free Shipping Threshold ($)', key: 'free_shipping_threshold', placeholder: '200', type: 'number' },
-        { label: 'Default Currency',            key: 'default_currency',        placeholder: 'USD', type: 'text'   },
-        { label: 'Return Window (days)',         key: 'return_window',           placeholder: '30',  type: 'number' },
+        { label: 'Free Shipping Threshold', key: 'free_shipping_threshold', placeholder: '200',  type: 'number' },
+        { label: 'Default Currency',        key: 'default_currency',        placeholder: 'BDT',  type: 'text'   },
+        { label: 'Return Window (days)',     key: 'return_window',           placeholder: '30',   type: 'number' },
       ],
     },
   ];
@@ -920,30 +972,186 @@ function SettingsTab() {
             {fields.map(({ label, key, placeholder, type }) => (
               <div key={key}>
                 <label htmlFor={key} className="block text-sm font-semibold text-[#1a0508] mb-1.5">{label}</label>
-                <input
-                  id={key}
-                  name={key}
-                  type={type}
-                  placeholder={placeholder}
-                  value={values[key] ?? ''}
-                  onChange={(e) => set(key, e.target.value)}
-                  className={inputCls}
-                />
+                <input id={key} name={key} type={type} placeholder={placeholder}
+                  value={values[key] ?? ''} onChange={(e) => set(key, e.target.value)} className={inputCls} />
               </div>
             ))}
           </div>
         </div>
       ))}
-
-      <button
-        onClick={handleSave}
-        disabled={saving}
-        className={`btn-brand px-8 py-3 text-sm ${saved ? 'bg-emerald-600' : ''}`}
-      >
+      <button onClick={handleSave} disabled={saving}
+        className={`btn-brand px-8 py-3 text-sm ${saved ? 'bg-emerald-600' : ''}`}>
         {saving ? <><RefreshCw className="w-4 h-4 animate-spin" /> Saving...</>
          : saved  ? <><CheckCircle className="w-4 h-4" /> Saved!</>
          : <><Save className="w-4 h-4" /> Save Settings</>}
       </button>
+    </div>
+  );
+}
+
+// ─── Carousel Tab ─────────────────────────────────────────────────────────────
+
+function CarouselTab() {
+  const [slides, setSlides] = useState<CarouselSlide[]>([]);
+  const [products, setProducts] = useState<Product[]>([]);
+  const [uploading, setUploading] = useState(false);
+  const [label, setLabel] = useState('');
+  const [selectedProductId, setSelectedProductId] = useState<number | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    fetchAllCarouselSlides().then(setSlides);
+    fetchProducts().then(setProducts);
+  }, []);
+
+  const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setUploading(true);
+    try {
+      const ext = file.name.split('.').pop();
+      const filename = `carousel-${Date.now()}.${ext}`;
+      const { data, error } = await supabase.storage.from('products').upload(filename, file, { upsert: true });
+      if (error) throw error;
+      const { data: { publicUrl } } = supabase.storage.from('products').getPublicUrl(data.path);
+      const { data: slide } = await upsertCarouselSlide({
+        image_url: publicUrl,
+        product_id: selectedProductId,
+        label: label || null,
+        sort_order: slides.length,
+        active: true,
+      });
+      if (slide) setSlides(prev => [...prev, slide]);
+      setLabel('');
+      setSelectedProductId(null);
+    } catch (err) {
+      alert('Upload failed: ' + (err instanceof Error ? err.message : String(err)));
+    } finally {
+      setUploading(false);
+      if (fileInputRef.current) fileInputRef.current.value = '';
+    }
+  };
+
+  const addFromProduct = async (product: Product, imageUrl: string) => {
+    const { data: slide } = await upsertCarouselSlide({
+      image_url: imageUrl,
+      product_id: product.id,
+      label: product.category,
+      sort_order: slides.length,
+      active: true,
+    });
+    if (slide) setSlides(prev => [...prev, slide]);
+  };
+
+  const removeSlide = async (id: number) => {
+    await deleteCarouselSlide(id);
+    setSlides(prev => prev.filter(s => s.id !== id));
+  };
+
+  const toggleActive = async (slide: CarouselSlide) => {
+    const { data } = await upsertCarouselSlide({ ...slide, active: !slide.active });
+    if (data) setSlides(prev => prev.map(s => s.id === slide.id ? data : s));
+  };
+
+  const inputCls = "w-full px-4 py-2.5 border-2 border-[#e8dede] rounded-xl text-base text-[#1a0508] placeholder:text-[#7a5c60]/40 focus:outline-none focus:border-[#64020e] transition-colors bg-white";
+
+  return (
+    <div className="space-y-6">
+      {/* Current slides */}
+      <div className="bg-white rounded-2xl border border-[#e8dede] overflow-hidden">
+        <div className="px-6 py-4 border-b border-[#f5f0ef] flex items-center justify-between">
+          <h3 className="text-lg font-semibold text-[#1a0508]">Carousel Slides</h3>
+          <span className="text-sm text-[#7a5c60]">{slides.filter(s => s.active).length} active</span>
+        </div>
+        {slides.length === 0 ? (
+          <div className="py-12 text-center text-[#7a5c60]">No slides yet — add one below</div>
+        ) : (
+          <div className="divide-y divide-[#f5f0ef]">
+            {slides.map((slide, i) => (
+              <div key={slide.id} className="flex items-center gap-4 px-6 py-4">
+                <span className="text-sm text-[#7a5c60] w-5">{i + 1}</span>
+                <img src={slide.image_url} alt="" className="w-16 h-12 object-cover rounded-lg flex-shrink-0" />
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium text-[#1a0508] truncate">{slide.label || 'No label'}</p>
+                  {slide.product_id && (
+                    <p className="text-xs text-[#7a5c60]">Linked to product #{slide.product_id}</p>
+                  )}
+                </div>
+                <button
+                  onClick={() => toggleActive(slide)}
+                  className={`px-3 py-1 rounded-full text-xs font-semibold transition-colors ${
+                    slide.active ? 'bg-emerald-100 text-emerald-700' : 'bg-[#f5f0ef] text-[#7a5c60]'
+                  }`}
+                >
+                  {slide.active ? 'Active' : 'Hidden'}
+                </button>
+                <button
+                  onClick={() => removeSlide(slide.id)}
+                  className="w-8 h-8 flex items-center justify-center rounded-lg text-[#7a5c60] hover:text-red-500 hover:bg-red-50 transition-all"
+                >
+                  <Trash2 className="w-4 h-4" />
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* Upload new image */}
+      <div className="bg-white rounded-2xl border border-[#e8dede] p-6">
+        <h3 className="text-lg font-semibold text-[#1a0508] mb-4">Upload New Carousel Image</h3>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
+          <div>
+            <label htmlFor="carousel-label" className="block text-sm font-semibold text-[#1a0508] mb-1.5">Label (optional)</label>
+            <input id="carousel-label" type="text" value={label} onChange={e => setLabel(e.target.value)} placeholder="e.g. New Arrivals" className={inputCls} />
+          </div>
+          <div>
+            <label htmlFor="carousel-product" className="block text-sm font-semibold text-[#1a0508] mb-1.5">Link to Product (optional)</label>
+            <div className="relative">
+              <select id="carousel-product" value={selectedProductId ?? ''} onChange={e => setSelectedProductId(e.target.value ? Number(e.target.value) : null)} className={`${inputCls} appearance-none pr-9 cursor-pointer`}>
+                <option value="">None</option>
+                {products.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+              </select>
+              <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#7a5c60] pointer-events-none" />
+            </div>
+          </div>
+        </div>
+        <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handleUpload} />
+        <button
+          onClick={() => fileInputRef.current?.click()}
+          disabled={uploading}
+          className="btn-brand px-6 py-2.5 text-sm disabled:opacity-50"
+        >
+          {uploading ? <><RefreshCw className="w-4 h-4 animate-spin" /> Uploading...</> : <><Upload className="w-4 h-4" /> Upload Image</>}
+        </button>
+      </div>
+
+      {/* Pick from product images */}
+      <div className="bg-white rounded-2xl border border-[#e8dede] p-6">
+        <h3 className="text-lg font-semibold text-[#1a0508] mb-4">Add from Product Images</h3>
+        <div className="space-y-4">
+          {products.filter(p => (p.images ?? []).length > 0 || p.image).map(product => (
+            <div key={product.id}>
+              <p className="text-sm font-semibold text-[#1a0508] mb-2">{product.name}</p>
+              <div className="flex gap-2 flex-wrap">
+                {[product.image, ...(product.images ?? [])].filter((img, i, arr) => img && arr.indexOf(img) === i).map((img, i) => (
+                  <button
+                    key={i}
+                    onClick={() => addFromProduct(product, img)}
+                    className="w-16 h-12 rounded-lg overflow-hidden border-2 border-[#e8dede] hover:border-[#64020e] transition-all flex-shrink-0 relative group"
+                    title="Add to carousel"
+                  >
+                    <img src={img} alt="" className="w-full h-full object-cover" />
+                    <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                      <Plus className="w-4 h-4 text-white" />
+                    </div>
+                  </button>
+                ))}
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
     </div>
   );
 }
@@ -983,6 +1191,7 @@ export function AdminDashboard() {
     { id: 'overview',   label: 'Overview',   icon: LayoutDashboard },
     { id: 'orders',     label: 'Orders',     icon: ShoppingBag },
     { id: 'products',   label: 'Products',   icon: Package },
+    { id: 'carousel',   label: 'Carousel',   icon: BarChart2 },
     { id: 'customers',  label: 'Customers',  icon: Users },
     { id: 'settings',   label: 'Settings',   icon: Settings },
   ];
@@ -1045,6 +1254,7 @@ export function AdminDashboard() {
         {activeTab === 'overview'  && <OverviewTab />}
         {activeTab === 'orders'    && <OrdersTab />}
         {activeTab === 'products'  && <ProductsTab />}
+        {activeTab === 'carousel'  && <CarouselTab />}
         {activeTab === 'customers' && <CustomersTab />}
         {activeTab === 'settings'  && <SettingsTab />}
       </div>

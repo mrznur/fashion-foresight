@@ -22,6 +22,7 @@ const CollectionsPage = lazy(() => import('./pages/CollectionsPage').then((m) =>
 const AboutPage = lazy(() => import('./pages/AboutPage').then((m) => ({ default: m.AboutPage })));
 const ContactPage = lazy(() => import('./pages/ContactPage').then((m) => ({ default: m.ContactPage })));
 const UserDashboard = lazy(() => import('./components/UserDashboard').then((m) => ({ default: m.UserDashboard })));
+const OrderTrackingPage = lazy(() => import('./pages/OrderTrackingPage').then((m) => ({ default: m.OrderTrackingPage })));
 const AdminDashboard = lazy(() => import('./components/AdminDashboard').then((m) => ({ default: m.AdminDashboard })));
 
 function PageLoader() {
@@ -56,6 +57,7 @@ function AppShell() {
               <Route path="/collections" element={<CollectionsPage />} />
               <Route path="/about" element={<AboutPage />} />
               <Route path="/contact" element={<ContactPage />} />
+              <Route path="/track-order" element={<OrderTrackingPage />} />
               <Route
                 path="/dashboard"
                 element={

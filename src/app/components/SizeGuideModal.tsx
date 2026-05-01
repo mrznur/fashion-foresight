@@ -7,17 +7,157 @@ interface SizeGuideModalProps {
   category?: string;
 }
 
-type MeasurementUnit = 'inches' | 'cm';
+type Unit = 'inches' | 'cm';
 
-export function SizeGuideModal({ isOpen, onClose, category = 'Suits' }: SizeGuideModalProps) {
-  const [unit, setUnit] = useState<MeasurementUnit>('inches');
+// ─── Size chart data from actual product measurements ─────────────────────────
+
+const CHARTS: Record<string, {
+  title: string;
+  note?: string;
+  headers: string[];
+  rows: Record<string, string | number>[];
+}> = {
+
+  'T-Shirts': {
+    title: 'T-Shirt Size Guide',
+    note: 'All measurements in inches',
+    headers: ['Measurement', 'S', 'M', 'L', 'XL'],
+    rows: [
+      { Measurement: 'Chest',  S: 38, M: 40, L: 42, XL: 46 },
+      { Measurement: 'Length', S: 26, M: 28, L: 28, XL: 29 },
+      { Measurement: 'Sleeve', S: 9,  M: 9,  L: 9,  XL: 10 },
+    ],
+  },
+
+  'Polo Shirts': {
+    title: 'Polo Shirt Size Guide',
+    note: 'All measurements in inches — multiple brands available',
+    headers: ['Measurement', 'M (Kappa)', 'L (LeeCooper)', 'L (Tommy)', 'L (FC)', 'XL (FC)'],
+    rows: [
+      { Measurement: 'Chest',  'M (Kappa)': 40, 'L (LeeCooper)': 41, 'L (Tommy)': 42, 'L (FC)': 42, 'XL (FC)': 44 },
+      { Measurement: 'Length', 'M (Kappa)': 28, 'L (LeeCooper)': 28, 'L (Tommy)': 29, 'L (FC)': 29.5, 'XL (FC)': 30 },
+      { Measurement: 'Sleeve', 'M (Kappa)': 10, 'L (LeeCooper)': 8,  'L (Tommy)': 9,  'L (FC)': 9,   'XL (FC)': 9  },
+    ],
+  },
+
+  'Boxers': {
+    title: 'Boxer Size Guide',
+    note: 'All measurements in inches — multiple brands available',
+    headers: ['Measurement', 'S (P&B)', 'M (CK)', 'L (NAVY & NAVY)', 'XL', 'XXL (ZAFFIRI)'],
+    rows: [
+      { Measurement: 'Waist',            'S (P&B)': 26, 'M (CK)': 28, 'L (NAVY & NAVY)': 30, XL: '—', 'XXL (ZAFFIRI)': 32 },
+      { Measurement: 'Front Rise',       'S (P&B)': '—', 'M (CK)': 'PC', 'L (NAVY & NAVY)': '—', XL: '—', 'XXL (ZAFFIRI)': '—' },
+      { Measurement: 'Side Seam Length', 'S (P&B)': '—', 'M (CK)': 26, 'L (NAVY & NAVY)': '—', XL: '—', 'XXL (ZAFFIRI)': '—' },
+    ],
+  },
+
+  'Denim Jeans': {
+    title: 'Denim Jeans Size Guide',
+    note: 'Waist sizes in inches',
+    headers: ['Size', 'Waist', 'Inseam', 'Rise'],
+    rows: [
+      { Size: '28', Waist: 28, Inseam: 30, Rise: 10 },
+      { Size: '30', Waist: 30, Inseam: 30, Rise: 10.5 },
+      { Size: '32', Waist: 32, Inseam: 31, Rise: 11 },
+      { Size: '34', Waist: 34, Inseam: 31, Rise: 11.5 },
+      { Size: '36', Waist: 36, Inseam: 32, Rise: 12 },
+      { Size: '38', Waist: 38, Inseam: 32, Rise: 12.5 },
+      { Size: '40', Waist: 40, Inseam: 32, Rise: 13 },
+    ],
+  },
+
+  'Cargo Pants': {
+    title: 'Cargo Pants Size Guide',
+    note: 'Waist sizes in inches',
+    headers: ['Size', 'Waist', 'Hip', 'Inseam'],
+    rows: [
+      { Size: '28', Waist: 28, Hip: 36, Inseam: 30 },
+      { Size: '30', Waist: 30, Hip: 38, Inseam: 30 },
+      { Size: '32', Waist: 32, Hip: 40, Inseam: 31 },
+      { Size: '34', Waist: 34, Hip: 42, Inseam: 31 },
+      { Size: '36', Waist: 36, Hip: 44, Inseam: 32 },
+      { Size: '38', Waist: 38, Hip: 46, Inseam: 32 },
+      { Size: '40', Waist: 40, Hip: 48, Inseam: 32 },
+    ],
+  },
+
+  'Joggers': {
+    title: 'Joggers Size Guide',
+    note: 'All measurements in inches',
+    headers: ['Size', 'Waist', 'Hip', 'Length'],
+    rows: [
+      { Size: 'XS', Waist: 26, Hip: 34, Length: 38 },
+      { Size: 'S',  Waist: 28, Hip: 36, Length: 39 },
+      { Size: 'M',  Waist: 30, Hip: 38, Length: 40 },
+      { Size: 'L',  Waist: 32, Hip: 40, Length: 41 },
+      { Size: 'XL', Waist: 34, Hip: 42, Length: 42 },
+      { Size: 'XXL',Waist: 36, Hip: 44, Length: 43 },
+    ],
+  },
+
+  'Twirl Pants': {
+    title: 'Twirl Pants Size Guide',
+    note: 'Waist sizes in inches',
+    headers: ['Size', 'Waist', 'Hip', 'Inseam'],
+    rows: [
+      { Size: '28', Waist: 28, Hip: 36, Inseam: 30 },
+      { Size: '30', Waist: 30, Hip: 38, Inseam: 30 },
+      { Size: '32', Waist: 32, Hip: 40, Inseam: 31 },
+      { Size: '34', Waist: 34, Hip: 42, Inseam: 31 },
+      { Size: '36', Waist: 36, Hip: 44, Inseam: 32 },
+      { Size: '38', Waist: 38, Hip: 46, Inseam: 32 },
+      { Size: '40', Waist: 40, Hip: 48, Inseam: 32 },
+    ],
+  },
+
+  'Formal Shirts': {
+    title: 'Formal Shirt Size Guide',
+    note: 'All measurements in inches',
+    headers: ['Size', 'Neck', 'Chest', 'Sleeve', 'Shoulder'],
+    rows: [
+      { Size: '36', Neck: 14.5, Chest: 36, Sleeve: 32, Shoulder: 17 },
+      { Size: '38', Neck: 15,   Chest: 38, Sleeve: 33, Shoulder: 17.5 },
+      { Size: '40', Neck: 15.5, Chest: 40, Sleeve: 33.5, Shoulder: 18 },
+      { Size: '42', Neck: 16,   Chest: 42, Sleeve: 34, Shoulder: 18.5 },
+      { Size: '44', Neck: 16.5, Chest: 44, Sleeve: 34.5, Shoulder: 19 },
+      { Size: '46', Neck: 17,   Chest: 46, Sleeve: 35, Shoulder: 19.5 },
+    ],
+  },
+
+  'Casual Shirts': {
+    title: 'Casual Shirt Size Guide',
+    note: 'All measurements in inches',
+    headers: ['Size', 'Chest', 'Length', 'Sleeve'],
+    rows: [
+      { Size: 'XS', Chest: 36, Length: 27, Sleeve: 8.5 },
+      { Size: 'S',  Chest: 38, Length: 28, Sleeve: 9 },
+      { Size: 'M',  Chest: 40, Length: 28, Sleeve: 9 },
+      { Size: 'L',  Chest: 42, Length: 29, Sleeve: 9.5 },
+      { Size: 'XL', Chest: 44, Length: 30, Sleeve: 9.5 },
+      { Size: 'XXL',Chest: 46, Length: 30, Sleeve: 10 },
+    ],
+  },
+};
+
+const DEFAULT_CHART = {
+  title: 'General Size Guide',
+  note: 'All measurements in inches',
+  headers: ['Size', 'Chest', 'Waist', 'Length'],
+  rows: [
+    { Size: 'XS', Chest: 34, Waist: 28, Length: 27 },
+    { Size: 'S',  Chest: 36, Waist: 30, Length: 28 },
+    { Size: 'M',  Chest: 38, Waist: 32, Length: 29 },
+    { Size: 'L',  Chest: 40, Waist: 34, Length: 30 },
+    { Size: 'XL', Chest: 42, Waist: 36, Length: 31 },
+    { Size: 'XXL',Chest: 44, Waist: 38, Length: 32 },
+  ],
+};
+
+export function SizeGuideModal({ isOpen, onClose, category = '' }: SizeGuideModalProps) {
+  const [unit, setUnit] = useState<Unit>('inches');
 
   useEffect(() => {
-    if (isOpen) {
-      document.body.style.overflow = 'hidden';
-    } else {
-      document.body.style.overflow = '';
-    }
+    document.body.style.overflow = isOpen ? 'hidden' : '';
     return () => { document.body.style.overflow = ''; };
   }, [isOpen]);
 
@@ -29,88 +169,23 @@ export function SizeGuideModal({ isOpen, onClose, category = 'Suits' }: SizeGuid
 
   if (!isOpen) return null;
 
-  const convert = (inches: number) => unit === 'cm' ? (inches * 2.54).toFixed(1) : inches.toString();
+  const chart = CHARTS[category] ?? DEFAULT_CHART;
 
-  // Size charts based on category
-  const getSizeChart = () => {
-    if (category === 'Suits' || category === 'Blazers' || category === 'Outerwear') {
-      return {
-        title: 'Suits, Blazers & Outerwear',
-        headers: ['Size', 'Chest', 'Waist', 'Sleeve', 'Shoulder'],
-        rows: [
-          { size: '36 / XS', chest: 36, waist: 30, sleeve: 32, shoulder: 17 },
-          { size: '38 / S', chest: 38, waist: 32, sleeve: 33, shoulder: 17.5 },
-          { size: '40 / M', chest: 40, waist: 34, sleeve: 33.5, shoulder: 18 },
-          { size: '42 / L', chest: 42, waist: 36, sleeve: 34, shoulder: 18.5 },
-          { size: '44 / XL', chest: 44, waist: 38, sleeve: 34.5, shoulder: 19 },
-          { size: '46 / XXL', chest: 46, waist: 40, sleeve: 35, shoulder: 19.5 },
-        ],
-      };
-    } else if (category === 'Shirts') {
-      return {
-        title: 'Dress Shirts',
-        headers: ['Size', 'Neck', 'Chest', 'Sleeve', 'Shoulder'],
-        rows: [
-          { size: '36 / XS', neck: 14.5, chest: 36, sleeve: 32, shoulder: 17 },
-          { size: '38 / S', neck: 15, chest: 38, sleeve: 33, shoulder: 17.5 },
-          { size: '40 / M', neck: 15.5, chest: 40, sleeve: 33.5, shoulder: 18 },
-          { size: '42 / L', neck: 16, chest: 42, sleeve: 34, shoulder: 18.5 },
-          { size: '44 / XL', neck: 16.5, chest: 44, sleeve: 34.5, shoulder: 19 },
-          { size: '46 / XXL', neck: 17, chest: 46, sleeve: 35, shoulder: 19.5 },
-        ],
-      };
-    } else if (category === 'Casual') {
-      return {
-        title: 'Casual Wear',
-        headers: ['Size', 'Chest', 'Waist', 'Length'],
-        rows: [
-          { size: 'XS', chest: 34, waist: 28, length: 27 },
-          { size: 'S', chest: 36, waist: 30, length: 28 },
-          { size: 'M', chest: 38, waist: 32, length: 29 },
-          { size: 'L', chest: 40, waist: 34, length: 30 },
-          { size: 'XL', chest: 42, waist: 36, length: 31 },
-          { size: 'XXL', chest: 44, waist: 38, length: 32 },
-        ],
-      };
-    } else if (category === 'Footwear') {
-      return {
-        title: 'Footwear',
-        headers: ['US', 'UK', 'EU', 'Foot Length'],
-        rows: [
-          { size: '7', uk: 6, eu: 40, length: 9.6 },
-          { size: '8', uk: 7, eu: 41, length: 9.9 },
-          { size: '9', uk: 8, eu: 42, length: 10.1 },
-          { size: '10', uk: 9, eu: 43, length: 10.4 },
-          { size: '11', uk: 10, eu: 44, length: 10.7 },
-          { size: '12', uk: 11, eu: 45, length: 11 },
-          { size: '13', uk: 12, eu: 46, length: 11.3 },
-        ],
-      };
-    } else {
-      // Default general sizing
-      return {
-        title: 'General Sizing',
-        headers: ['Size', 'Chest', 'Waist', 'Hip'],
-        rows: [
-          { size: 'XS', chest: 34, waist: 28, hip: 34 },
-          { size: 'S', chest: 36, waist: 30, hip: 36 },
-          { size: 'M', chest: 38, waist: 32, hip: 38 },
-          { size: 'L', chest: 40, waist: 34, hip: 40 },
-          { size: 'XL', chest: 42, waist: 36, hip: 42 },
-          { size: 'XXL', chest: 44, waist: 38, hip: 44 },
-        ],
-      };
-    }
+  const fmt = (val: string | number): string => {
+    if (typeof val !== 'number') return String(val);
+    if (unit === 'cm') return (val * 2.54).toFixed(1);
+    return String(val);
   };
 
-  const chart = getSizeChart();
+  const isNumericHeader = (h: string) =>
+    !['Size', 'Measurement', 'Brand Name', 'Qty'].includes(h);
 
   return (
     <>
       <div className="fixed inset-0 bg-black/60 z-50 backdrop-blur-sm" onClick={onClose} />
       <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-        <div className="bg-white rounded-3xl shadow-2xl w-full max-w-4xl max-h-[90vh] overflow-y-auto">
-          
+        <div className="bg-white rounded-3xl shadow-2xl w-full max-w-3xl max-h-[90vh] overflow-y-auto">
+
           {/* Header */}
           <div className="flex items-center justify-between px-7 py-5 border-b border-[#f5f0ef] sticky top-0 bg-white z-10">
             <div className="flex items-center gap-3">
@@ -118,8 +193,8 @@ export function SizeGuideModal({ isOpen, onClose, category = 'Suits' }: SizeGuid
                 <Ruler className="w-5 h-5 text-[#64020e]" />
               </div>
               <div>
-                <p className="text-overline">Measurements</p>
-                <h3 className="text-xl font-semibold text-[#1a0508] mt-0.5 font-display">Size Guide</h3>
+                <p className="text-xs text-[#64020e] uppercase tracking-widest font-semibold">Measurements</p>
+                <h3 className="text-xl font-semibold text-[#1a0508] mt-0.5">{chart.title}</h3>
               </div>
             </div>
             <button onClick={onClose} className="w-8 h-8 flex items-center justify-center rounded-xl text-[#7a5c60] hover:bg-[#fdf2f2] hover:text-[#64020e] transition-all">
@@ -127,57 +202,46 @@ export function SizeGuideModal({ isOpen, onClose, category = 'Suits' }: SizeGuid
             </button>
           </div>
 
-          <div className="px-7 py-6">
-            
-            {/* Unit Toggle */}
-            <div className="flex items-center justify-between mb-6">
-              <h4 className="text-lg font-semibold text-[#1a0508]">{chart.title}</h4>
-              <div className="flex gap-1 bg-[#f5f0ef] rounded-xl p-1">
-                <button
-                  onClick={() => setUnit('inches')}
-                  className={`px-4 py-2 rounded-lg text-sm font-semibold transition-all ${
-                    unit === 'inches'
-                      ? 'bg-white text-[#64020e] shadow-sm'
-                      : 'text-[#7a5c60] hover:text-[#1a0508]'
-                  }`}
-                >
-                  Inches
-                </button>
-                <button
-                  onClick={() => setUnit('cm')}
-                  className={`px-4 py-2 rounded-lg text-sm font-semibold transition-all ${
-                    unit === 'cm'
-                      ? 'bg-white text-[#64020e] shadow-sm'
-                      : 'text-[#7a5c60] hover:text-[#1a0508]'
-                  }`}
-                >
-                  Centimeters
-                </button>
+          <div className="px-7 py-6 space-y-6">
+
+            {/* Unit toggle + note */}
+            <div className="flex items-center justify-between">
+              {chart.note && <p className="text-sm text-[#7a5c60]">{chart.note}</p>}
+              <div className="flex gap-1 bg-[#f5f0ef] rounded-xl p-1 ml-auto">
+                {(['inches', 'cm'] as Unit[]).map(u => (
+                  <button key={u} onClick={() => setUnit(u)}
+                    className={`px-4 py-1.5 rounded-lg text-sm font-semibold transition-all ${
+                      unit === u ? 'bg-white text-[#64020e] shadow-sm' : 'text-[#7a5c60] hover:text-[#1a0508]'
+                    }`}>
+                    {u === 'inches' ? 'Inches' : 'CM'}
+                  </button>
+                ))}
               </div>
             </div>
 
-            {/* Size Chart Table */}
+            {/* Table */}
             <div className="overflow-x-auto rounded-2xl border border-[#e8dede]">
-              <table className="w-full">
+              <table className="w-full text-sm">
                 <thead className="bg-[#faf9f8]">
                   <tr>
-                    {chart.headers.map((header) => (
-                      <th key={header} className="px-4 py-3 text-left text-sm font-bold text-[#7a5c60] uppercase tracking-wider">
-                        {header}
-                        {header !== 'Size' && header !== 'US' && header !== 'UK' && header !== 'EU' && (
-                          <span className="ml-1 text-xs font-normal">({unit})</span>
-                        )}
+                    {chart.headers.map(h => (
+                      <th key={h} className="px-4 py-3 text-left font-bold text-[#7a5c60] uppercase tracking-wider whitespace-nowrap">
+                        {h}
+                        {isNumericHeader(h) && <span className="ml-1 text-xs font-normal">({unit === 'inches' ? 'in' : 'cm'})</span>}
                       </th>
                     ))}
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-[#f5f0ef] bg-white">
-                  {chart.rows.map((row, idx) => (
-                    <tr key={idx} className="hover:bg-[#faf9f8] transition-colors">
-                      <td className="px-4 py-3 text-sm font-semibold text-[#1a0508]">{row.size}</td>
-                      {Object.entries(row).slice(1).map(([key, value]) => (
-                        <td key={key} className="px-4 py-3 text-sm text-[#7a5c60]">
-                          {typeof value === 'number' && key !== 'uk' && key !== 'eu' ? convert(value) : value}
+                  {chart.rows.map((row, i) => (
+                    <tr key={i} className={`hover:bg-[#faf9f8] transition-colors ${
+                      String(row[chart.headers[0]]) === 'Qty' ? 'bg-[#fdf2f2] font-semibold' : ''
+                    }`}>
+                      {chart.headers.map(h => (
+                        <td key={h} className={`px-4 py-3 whitespace-nowrap ${
+                          h === chart.headers[0] ? 'font-semibold text-[#1a0508]' : 'text-[#7a5c60]'
+                        }`}>
+                          {isNumericHeader(h) ? fmt(row[h] ?? '—') : String(row[h] ?? '—')}
                         </td>
                       ))}
                     </tr>
@@ -186,54 +250,29 @@ export function SizeGuideModal({ isOpen, onClose, category = 'Suits' }: SizeGuid
               </table>
             </div>
 
-            {/* How to Measure */}
-            <div className="mt-8 bg-[#fdf2f2] rounded-2xl p-6">
-              <h5 className="text-base font-semibold text-[#1a0508] mb-4">How to Measure</h5>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {category === 'Footwear' ? (
+            {/* How to measure */}
+            <div className="bg-[#fdf2f2] rounded-2xl p-5">
+              <p className="text-sm font-semibold text-[#1a0508] mb-3">How to Measure</p>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm text-[#7a5c60]">
+                {(category === 'Denim Jeans' || category === 'Cargo Pants' || category === 'Twirl Pants' || category === 'Joggers') ? (
                   <>
-                    <div>
-                      <p className="text-sm font-semibold text-[#64020e] mb-1">Foot Length</p>
-                      <p className="text-sm text-[#7a5c60] leading-relaxed">
-                        Stand on a piece of paper and mark the longest point of your foot. Measure from heel to toe.
-                      </p>
-                    </div>
-                    <div>
-                      <p className="text-sm font-semibold text-[#64020e] mb-1">Best Time to Measure</p>
-                      <p className="text-sm text-[#7a5c60] leading-relaxed">
-                        Measure your feet at the end of the day when they're at their largest.
-                      </p>
-                    </div>
+                    <div><span className="font-semibold text-[#64020e]">Waist — </span>Measure around your natural waistline.</div>
+                    <div><span className="font-semibold text-[#64020e]">Hip — </span>Measure around the fullest part of your hips.</div>
+                    <div><span className="font-semibold text-[#64020e]">Inseam — </span>Measure from crotch to ankle along the inner leg.</div>
+                  </>
+                ) : category === 'Boxers' ? (
+                  <>
+                    <div><span className="font-semibold text-[#64020e]">Waist — </span>Measure around your natural waistline.</div>
+                    <div><span className="font-semibold text-[#64020e]">Front Rise — </span>Measure from waistband to crotch seam at front.</div>
+                    <div><span className="font-semibold text-[#64020e]">Side Seam — </span>Measure from waistband to hem along the side.</div>
                   </>
                 ) : (
                   <>
-                    <div>
-                      <p className="text-sm font-semibold text-[#64020e] mb-1">Chest</p>
-                      <p className="text-sm text-[#7a5c60] leading-relaxed">
-                        Measure around the fullest part of your chest, keeping the tape horizontal.
-                      </p>
-                    </div>
-                    <div>
-                      <p className="text-sm font-semibold text-[#64020e] mb-1">Waist</p>
-                      <p className="text-sm text-[#7a5c60] leading-relaxed">
-                        Measure around your natural waistline, keeping the tape comfortably loose.
-                      </p>
-                    </div>
-                    {(category === 'Suits' || category === 'Blazers' || category === 'Shirts') && (
-                      <>
-                        <div>
-                          <p className="text-sm font-semibold text-[#64020e] mb-1">Sleeve</p>
-                          <p className="text-sm text-[#7a5c60] leading-relaxed">
-                            Measure from the center back of your neck to your wrist with arm slightly bent.
-                          </p>
-                        </div>
-                        <div>
-                          <p className="text-sm font-semibold text-[#64020e] mb-1">Shoulder</p>
-                          <p className="text-sm text-[#7a5c60] leading-relaxed">
-                            Measure from one shoulder point to the other across your back.
-                          </p>
-                        </div>
-                      </>
+                    <div><span className="font-semibold text-[#64020e]">Chest — </span>Measure around the fullest part of your chest.</div>
+                    <div><span className="font-semibold text-[#64020e]">Length — </span>Measure from shoulder seam to hem.</div>
+                    <div><span className="font-semibold text-[#64020e]">Sleeve — </span>Measure from shoulder seam to wrist.</div>
+                    {(category === 'Formal Shirts') && (
+                      <div><span className="font-semibold text-[#64020e]">Neck — </span>Measure around the base of your neck.</div>
                     )}
                   </>
                 )}
@@ -241,34 +280,18 @@ export function SizeGuideModal({ isOpen, onClose, category = 'Suits' }: SizeGuid
             </div>
 
             {/* Tips */}
-            <div className="mt-6 p-5 bg-white border border-[#e8dede] rounded-2xl">
-              <p className="text-sm font-semibold text-[#1a0508] mb-2">💡 Sizing Tips</p>
-              <ul className="space-y-2 text-sm text-[#7a5c60]">
-                <li className="flex items-start gap-2">
-                  <span className="text-[#64020e] mt-1">•</span>
-                  <span>If you're between sizes, we recommend sizing up for a more comfortable fit.</span>
-                </li>
-                <li className="flex items-start gap-2">
-                  <span className="text-[#64020e] mt-1">•</span>
-                  <span>All measurements are approximate and may vary slightly by style.</span>
-                </li>
-                <li className="flex items-start gap-2">
-                  <span className="text-[#64020e] mt-1">•</span>
-                  <span>For tailored items, we recommend professional alterations for the perfect fit.</span>
-                </li>
-                <li className="flex items-start gap-2">
-                  <span className="text-[#64020e] mt-1">•</span>
-                  <span>Need help? Contact our styling team for personalized sizing advice.</span>
-                </li>
+            <div className="border border-[#e8dede] rounded-2xl p-5">
+              <p className="text-sm font-semibold text-[#1a0508] mb-2">💡 Tips</p>
+              <ul className="space-y-1.5 text-sm text-[#7a5c60]">
+                <li>• If between sizes, size up for a more comfortable fit.</li>
+                <li>• Measurements are approximate and may vary slightly by brand.</li>
+                <li>• Contact us for personalized sizing advice.</li>
               </ul>
             </div>
           </div>
 
-          {/* Footer */}
-          <div className="px-7 pb-7 flex gap-3">
-            <button onClick={onClose} className="btn-brand flex-1 justify-center py-3 text-sm">
-              Got It
-            </button>
+          <div className="px-7 pb-7">
+            <button onClick={onClose} className="btn-brand w-full justify-center py-3 text-sm">Got It</button>
           </div>
         </div>
       </div>
