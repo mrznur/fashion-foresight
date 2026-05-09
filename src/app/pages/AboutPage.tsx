@@ -23,8 +23,8 @@ export function AboutPage() {
         />
         <div className="absolute inset-0 bg-gradient-to-r from-black/70 via-black/40 to-black/20" />
         <div className="relative z-10 text-white px-4 max-w-3xl mx-auto text-center">
-          <p className="text-[10px] text-[#d4a0a0] uppercase tracking-[0.3em] font-semibold mb-4">Our Story</p>
-          <h1 className="text-5xl md:text-6xl font-light tracking-tight mb-5">{s.store_name}</h1>
+          <p className="text-[10px] md:text-2xl text-[#d4a0a0] uppercase tracking-[0.3em] font-semibold mb-4">Our Story</p>
+          <h1 className="text-5xl md:text-6xl bg-white/30 rounded-lg px-2 py-1 font-light tracking-tight mb-5">{s.store_name}</h1>
           <p className="text-white/70 text-lg max-w-xl mx-auto">Premium menswear for the modern gentleman</p>
         </div>
       </section>
@@ -32,7 +32,7 @@ export function AboutPage() {
       {/* Mission */}
       <section className="py-20 md:py-28">
         <div className="mx-auto max-w-3xl px-4 sm:px-6 lg:px-8 text-center">
-          <p className="text-[10px] text-[#64020e] uppercase tracking-[0.3em] font-semibold mb-4">Our Mission</p>
+          <p className="text-[10px] md:text-2xl text-[#64020e] uppercase tracking-[0.3em] font-semibold mb-4">Our Mission</p>
           <h2 className="text-3xl md:text-4xl font-semibold text-[#1a0508] mb-8">Crafted for the Modern Gentleman</h2>
           <p className="text-[#737373] leading-relaxed mb-5">
             At {s.store_name}, we believe that great style starts with great quality. Our mission is to bring you premium menswear that combines comfort, durability, and timeless design — at prices that make sense.

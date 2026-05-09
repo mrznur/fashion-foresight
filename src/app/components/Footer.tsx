@@ -34,7 +34,9 @@ export function Footer() {
               />
             </div>
             <p className="text-white/60 text-base leading-relaxed mb-6">
-              Modern sophistication meets Italian craftsmanship. Luxury menswear for the discerning gentleman.
+              Be Trendy, Think Fashionable!
+              <span> Modern sophistication meets authenticity.</span>
+              
             </p>
             <div className="flex gap-3">
               {[

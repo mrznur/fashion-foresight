@@ -1,14 +1,9 @@
-/**
- * React-friendly product hooks that use Supabase when configured,
- * falling back to static data otherwise.
- */
 import { useState, useEffect } from 'react';
 import { fetchProducts, fetchProductById } from './db';
-import { PRODUCTS as STATIC_PRODUCTS, getRelatedProducts as staticRelated } from './products';
 import type { Product } from './types';
 
 export function useProducts() {
-  const [products, setProducts] = useState<Product[]>(STATIC_PRODUCTS);
+  const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -22,14 +17,13 @@ export function useProducts() {
 }
 
 export function useProduct(id: number) {
-  const [product, setProduct] = useState<Product | null>(
-    STATIC_PRODUCTS.find((p) => p.id === id) ?? null
-  );
+  const [product, setProduct] = useState<Product | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    if (!id) { setLoading(false); return; }
     fetchProductById(id).then((data) => {
-      if (data) setProduct(data);
+      setProduct(data);
       setLoading(false);
     });
   }, [id]);
@@ -38,9 +32,10 @@ export function useProduct(id: number) {
 }
 
 export function useRelatedProducts(productId: number, limit = 3) {
-  const [related, setRelated] = useState<Product[]>(staticRelated(productId, limit));
+  const [related, setRelated] = useState<Product[]>([]);
 
   useEffect(() => {
+    if (!productId) return;
     fetchProducts().then((all) => {
       const current = all.find((p) => p.id === productId);
       if (!current) return;

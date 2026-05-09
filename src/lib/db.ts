@@ -1,6 +1,5 @@
 import { supabase, isSupabaseConfigured } from './supabase';
 import type { Product, Order, CartItem, ApiResult } from './types';
-import { PRODUCTS as STATIC_PRODUCTS } from './products';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -211,6 +210,15 @@ export async function createOrder(
     .single();
 
   if (error) return { data: null, error: error.message };
+
+  // Decrement stock for each item ordered
+  for (const item of items) {
+    await supabase.rpc('decrement_stock', {
+      product_id: item.id,
+      qty: item.quantity,
+    });
+  }
+
   return {
     data: {
       id:             data.id,

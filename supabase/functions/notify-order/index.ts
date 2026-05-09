@@ -10,14 +10,21 @@ serve(async (req) => {
     if (!order) return new Response('No record', { status: 400 });
 
     const items = Array.isArray(order.items) ? order.items : [];
+    const shipping = order.shipping_address ?? {};
+
     const itemRows = items.map((item: { name: string; size: string; quantity: number; price: number }) =>
       `<tr>
-        <td style="padding:8px;border-bottom:1px solid #f5f0ef;">${item.name}</td>
-        <td style="padding:8px;border-bottom:1px solid #f5f0ef;text-align:center;">${item.size}</td>
-        <td style="padding:8px;border-bottom:1px solid #f5f0ef;text-align:center;">${item.quantity}</td>
-        <td style="padding:8px;border-bottom:1px solid #f5f0ef;text-align:right;">$${(item.price * item.quantity).toFixed(2)}</td>
+        <td style="padding:8px 12px;border-bottom:1px solid #f5f0ef;">${item.name}</td>
+        <td style="padding:8px 12px;border-bottom:1px solid #f5f0ef;text-align:center;">${item.size}</td>
+        <td style="padding:8px 12px;border-bottom:1px solid #f5f0ef;text-align:center;">${item.quantity}</td>
+        <td style="padding:8px 12px;border-bottom:1px solid #f5f0ef;text-align:right;">BDT ${(item.price * item.quantity).toLocaleString()}</td>
       </tr>`
     ).join('');
+
+    const customerName = order.guest_name ?? 'Registered User';
+    const customerPhone = order.guest_phone ?? '—';
+    const deliveryAddress = [shipping.address, shipping.city].filter(Boolean).join(', ') || '—';
+    const deliveryNote = shipping.note || '';
 
     const res = await fetch('https://api.resend.com/emails', {
       method: 'POST',
@@ -28,26 +35,48 @@ serve(async (req) => {
       body: JSON.stringify({
         from: 'Fashion Foresight <onboarding@resend.dev>',
         to: [TO_EMAIL],
-        subject: `New Order #${order.id.slice(0, 8).toUpperCase()}`,
+        subject: `🛍️ New Order #${order.id.slice(0, 8).toUpperCase()} — BDT ${Number(order.total).toLocaleString()}`,
         html: `
-          <div style="font-family:Georgia,serif;max-width:600px;margin:0 auto;padding:32px;background:#fff;">
-            <h2 style="color:#64020e;margin-bottom:8px;">New Order Received</h2>
-            <p style="color:#7a5c60;margin-bottom:24px;">Order #${order.id.slice(0, 8).toUpperCase()} · ${new Date(order.created_at).toLocaleString()}</p>
-            <table style="width:100%;border-collapse:collapse;margin-bottom:24px;">
+          <div style="font-family:Georgia,serif;max-width:600px;margin:0 auto;padding:32px;background:#fff;border:1px solid #e8dede;border-radius:12px;">
+            <h2 style="color:#64020e;margin-bottom:4px;">New Order Received</h2>
+            <p style="color:#7a5c60;margin-bottom:24px;font-size:14px;">
+              Order #${order.id.slice(0, 8).toUpperCase()} &nbsp;·&nbsp; ${new Date(order.created_at).toLocaleString('en-BD')}
+            </p>
+
+            <table style="width:100%;border-collapse:collapse;margin-bottom:20px;background:#faf9f8;border-radius:8px;">
+              <tr>
+                <td style="padding:10px 14px;font-size:12px;color:#7a5c60;font-weight:bold;text-transform:uppercase;letter-spacing:0.05em;">Customer</td>
+                <td style="padding:10px 14px;font-size:14px;color:#1a0508;font-weight:600;">${customerName}</td>
+              </tr>
+              <tr>
+                <td style="padding:10px 14px;font-size:12px;color:#7a5c60;font-weight:bold;text-transform:uppercase;letter-spacing:0.05em;">Phone</td>
+                <td style="padding:10px 14px;font-size:14px;color:#1a0508;">${customerPhone}</td>
+              </tr>
+              <tr>
+                <td style="padding:10px 14px;font-size:12px;color:#7a5c60;font-weight:bold;text-transform:uppercase;letter-spacing:0.05em;">Delivery</td>
+                <td style="padding:10px 14px;font-size:14px;color:#1a0508;">${deliveryAddress}${deliveryNote ? `<br><span style="color:#7a5c60;font-size:12px;">Note: ${deliveryNote}</span>` : ''}</td>
+              </tr>
+            </table>
+
+            <table style="width:100%;border-collapse:collapse;margin-bottom:20px;">
               <thead>
-                <tr style="background:#faf9f8;">
-                  <th style="padding:8px;text-align:left;font-size:11px;text-transform:uppercase;letter-spacing:0.1em;color:#7a5c60;">Item</th>
-                  <th style="padding:8px;text-align:center;font-size:11px;text-transform:uppercase;letter-spacing:0.1em;color:#7a5c60;">Size</th>
-                  <th style="padding:8px;text-align:center;font-size:11px;text-transform:uppercase;letter-spacing:0.1em;color:#7a5c60;">Qty</th>
-                  <th style="padding:8px;text-align:right;font-size:11px;text-transform:uppercase;letter-spacing:0.1em;color:#7a5c60;">Price</th>
+                <tr style="background:#1a0508;">
+                  <th style="padding:10px 12px;text-align:left;font-size:11px;text-transform:uppercase;letter-spacing:0.1em;color:#fff;">Item</th>
+                  <th style="padding:10px 12px;text-align:center;font-size:11px;text-transform:uppercase;letter-spacing:0.1em;color:#fff;">Size</th>
+                  <th style="padding:10px 12px;text-align:center;font-size:11px;text-transform:uppercase;letter-spacing:0.1em;color:#fff;">Qty</th>
+                  <th style="padding:10px 12px;text-align:right;font-size:11px;text-transform:uppercase;letter-spacing:0.1em;color:#fff;">Price</th>
                 </tr>
               </thead>
               <tbody>${itemRows}</tbody>
             </table>
-            <div style="text-align:right;padding:16px;background:#fdf2f2;border-radius:8px;">
-              <p style="margin:0;font-size:18px;font-weight:bold;color:#1a0508;">Total: $${Number(order.total).toFixed(2)}</p>
+
+            <div style="text-align:right;padding:16px 20px;background:#fdf2f2;border-radius:8px;margin-bottom:24px;">
+              <p style="margin:0;font-size:20px;font-weight:bold;color:#64020e;">Total: BDT ${Number(order.total).toLocaleString()}</p>
             </div>
-            <p style="margin-top:24px;color:#7a5c60;font-size:12px;">Login to your admin dashboard to manage this order.</p>
+
+            <p style="color:#7a5c60;font-size:12px;text-align:center;">
+              Log in to your admin dashboard to update the order status.
+            </p>
           </div>
         `,
       }),

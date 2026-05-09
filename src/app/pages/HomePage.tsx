@@ -174,10 +174,8 @@ export function HomePage() {
       {/* ── Newsletter ───────────────────────────────────────────────────── */}
       <section className="py-20 md:py-24 bg-[#1a0508]">
         <div className="mx-auto max-w-xl px-4 sm:px-6 lg:px-8 text-center">
-          <div className="w-12 h-12 bg-[#64020e]/20 rounded-2xl flex items-center justify-center mx-auto mb-6">
-            <Sparkles className="w-6 h-6 text-[#d4a0a0]" />
-          </div>
-          <p className="text-[10px] text-[#64020e] uppercase tracking-[0.3em] font-semibold mb-3">Stay Updated</p>
+
+          <p className="text-[10px] md:text-xl text-[#a50518] uppercase tracking-[0.3em] font-semibold mb-3">Stay Updated</p>
           <h2 className="text-3xl md:text-4xl font-semibold text-white mb-4">Join the Inner Circle</h2>
           <p className="text-white/50 mb-8 text-sm leading-relaxed">
             Be the first to know about new collections, exclusive offers, and styling tips.
